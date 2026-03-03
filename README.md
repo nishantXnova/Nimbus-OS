@@ -1,20 +1,29 @@
-# NimbusOS: The Foundation 🌌
+# NimbusOS: The Reactive Core 🌌
 
-NimbusOS is a freestanding, 64-bit operating system kernel written in Rust. This project aims to explore the depths of low-level systems programming, starting from "First Light" (VGA output) to advanced memory management and multitasking.
+NimbusOS is a freestanding, 64-bit operating system kernel written in Rust. This project aims to explore the depths of low-level systems programming, from "First Light" (VGA output) to advanced memory management and multitasking.
 
-## 🚀 Phase 1: The Foundation
+## 🚀 Phase 2: The Reactive Core (Latest)
 
-NimbusOS currently implements the core essentials of a freestanding environment:
-- **`no_std` Environment**: Complete independence from any host operating system.
-- **Custom Target Specification**: Tailored `x86_64` JSON target to disable the Red Zone and enable software-based floating point.
-- **VGA Text Driver**: A low-level driver communicating directly with hardware memory at `0xb8000`.
-- **v86 Browser Emulator**: Integrated WebAssembly emulation for booting directly in a browser.
+NimbusOS has transitioned from a static display to a **Reactive Environment**. 
+
+### Key Technical Achievements:
+- **Interrupt Descriptor Table (IDT)**: Implemented a 256-entry IDT to handle CPU exceptions and hardware interrupts.
+- **Exception Handling**: Dedicated handlers for Breakpoint exceptions (`int3`), providing detailed stack frame information.
+- **Thread-Safe VGA Driver**: Refactored the VGA driver into a global `static WRITER` using `lazy_static` and `spin` Mutexes for safe concurrency.
+- **Enhanced v86 Emulator**: Integrated persistent diagnostic logging and brand identity (`logo.png`) into the bootloader interface.
+
+## ✨ Unique Selling Proposition (USP): "The Pulse"
+
+NimbusOS features a **Dynamic Visual Dashboard** integrated directly into the VGA buffer. Instead of interrupts being hidden in background logs, NimbusOS makes them **visual**:
+
+- **Real-time Feedback**: The top status bar acts as a "pulse," reacting instantly to kernel events.
+- **Visual Callbacks**: When a Breakpoint or system exception fires, the status bar flashes **RED** with a signal message (`! PULSE DETECTED !`), bridges the gap between hardware execution and human observation.
 
 ## 🛠️ Getting Started
 
 ### Prerequisites
 
-- **Rust Nightly**: Required for experimental features like `no_std`.
+- **Rust Nightly**: Required for experimental features like `no_std` and `abi_x86_interrupt`.
   ```bash
   rustup override set nightly
   rustup component add rust-src llvm-tools-preview
@@ -38,24 +47,21 @@ NimbusOS currently implements the core essentials of a freestanding environment:
 
 ### Running in the Browser (v86)
 
-1. Build the bootimage as shown above.
-2. Rename the output:
+NimbusOS is optimized for the **v86 WebAssembly Emulator**. 
+
+1. Once built, ensure `nimbus_os.bin` is in the root directory.
+2. Start a local server:
    ```bash
-   mv target/x86_64-nimbus_os/debug/bootimage-NimbusOS.bin bootimage-NimbusOS.bin
-   ```
-3. Start a local server:
-   ```bash
-   # Using Python
    python -m http.server 8000
    ```
-4. Open `http://localhost:8000` in your browser.
+3. Open `http://localhost:8000`. You will see the brand-new diagnostic loader and the kernel boot process in real-time.
 
 ## 🗺️ Roadmap
 
-- [x] **Phase 1**: "First Light" - VGA Driver & `no_std` Setup.
-- [ ] **Phase 2**: Interrupts & Exceptions (IDT).
-- [ ] **Phase 3**: Memory Management (GDT & Paging).
-- [ ] **Phase 4**: Kernel Multitasking.
+- [x] **Phase 1: The Foundation** - VGA Driver & `no_std` Setup.
+- [x] **Phase 2: The Reactive Core** - IDT, Interrupts, and "The Pulse" USP.
+- [ ] **Phase 3: Memory Management** - Global Descriptor Table (GDT) & Paging.
+- [ ] **Phase 4: Multitasking** - Kernel threads and context switching.
 
 ## 📜 License
 
@@ -63,4 +69,4 @@ This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) f
 
 ---
 
-*Built with 💙 by the Nishant Paudel.*
+*Built with passion by nishantXnova.*
