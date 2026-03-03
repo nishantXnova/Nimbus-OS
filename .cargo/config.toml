@@ -1,0 +1,6 @@
+[build]
+target = "x86_64-nimbus_os.json"
+
+[target.'cfg(target_os = "none")']
+runner = "bootimage run" # Note: User mentioned sandbox, but this is a common default for development
+# However, user said "dont write a command to run this", so I'll just set the target.
