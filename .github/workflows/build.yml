@@ -40,4 +40,4 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./
-        publish_files: index.html,nimbus_os.bin
+        publish_files: index.html,nimbus_os.bin,logo.png,v86/v86_all.js,v86/v86.wasm,v86/seabios.bin,v86/vgabios.bin

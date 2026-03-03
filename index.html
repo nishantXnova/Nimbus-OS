@@ -100,8 +100,8 @@
         <button onclick="window.location.reload()">Reset System</button>
     </div>
 
-    <!-- v86 Emulator Library -->
-    <script src="https://copy.sh/v86/build/v86_all.js"></script>
+    <!-- v86 Emulator Library (Local) -->
+    <script src="v86/v86_all.js"></script>
     <script>
         function log(msg) {
             var container = document.getElementById("log_container");
@@ -113,14 +113,14 @@
 
         window.onload = function () {
             var status = document.getElementById("status_text");
-            log("Loading assets...");
+            log("Loading local assets...");
 
             var emulator = new V86Starter({
-                wasm_path: "https://copy.sh/v86/build/v86.wasm",
+                wasm_path: "v86/v86.wasm",
                 memory_size: 32 * 1024 * 1024,
                 vga_canvas: document.getElementById("vga_canvas"),
-                bios: { url: "https://copy.sh/v86/bios/seabios.bin" },
-                vga_bios: { url: "https://copy.sh/v86/bios/vgabios.bin" },
+                bios: { url: "v86/seabios.bin" },
+                vga_bios: { url: "v86/vgabios.bin" },
                 fda: { url: "nimbus_os.bin" },
                 autostart: true,
             });
