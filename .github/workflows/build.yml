@@ -24,12 +24,20 @@ jobs:
       run: cargo bootimage
 
     - name: Rename image
-      run: mv target/x86_64-nimbus_os/debug/bootimage-NimbusOS.bin bootimage-NimbusOS.bin
+      run: mv target/x86_64-nimbus_os/debug/bootimage-NimbusOS.bin nimbus_os.bin
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v3
       with:
         name: nimbus-os-binary
         path: |
-          bootimage-NimbusOS.bin
+          nimbus_os.bin
           index.html
+
+    - name: Deploy to GitHub Pages
+      if: github.ref == 'refs/heads/main'
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./
+        publish_files: index.html,nimbus_os.bin

@@ -63,4 +63,4 @@ This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) f
 
 ---
 
-*Built with 💙 by the NimbusOS Team.*
+*Built with 💙 by the Nishant Paudel.*

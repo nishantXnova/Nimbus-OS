@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,29 +18,35 @@
             margin: 0;
             overflow: hidden;
         }
+
         h1 {
             color: #58a6ff;
             margin-bottom: 20px;
             text-shadow: 0 0 10px rgba(88, 166, 255, 0.3);
         }
+
         #screen_container {
             background-color: #000;
             padding: 10px;
             border-radius: 8px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 20px rgba(88, 166, 255, 0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(88, 166, 255, 0.1);
             border: 1px solid #30363d;
         }
+
         canvas {
             display: block;
         }
+
         .status {
             margin-top: 20px;
             font-size: 0.9em;
             color: #8b949e;
         }
+
         .controls {
             margin-top: 10px;
         }
+
         button {
             background: #21262d;
             border: 1px solid #30363d;
@@ -49,15 +56,17 @@
             cursor: pointer;
             transition: all 0.2s;
         }
+
         button:hover {
             background: #30363d;
             border-color: #8b949e;
         }
     </style>
 </head>
+
 <body>
     <h1>NimbusOS: First Light</h1>
-    
+
     <div id="screen_container">
         <canvas id="vga_canvas"></canvas>
     </div>
@@ -71,9 +80,9 @@
     <!-- v86 Emulator Library -->
     <script src="https://copy.sh/v86/build/v86_all.js"></script>
     <script>
-        window.onload = function() {
+        window.onload = function () {
             var status = document.getElementById("status_text");
-            
+
             // Note: In a real GitHub Pages setup, the path would be to the built .bin file
             // For local development, assume the file is named 'bootimage-NimbusOS.bin'
             var emulator = new V86Starter({
@@ -82,19 +91,20 @@
                 vga_canvas: document.getElementById("vga_canvas"),
                 bios: { url: "https://copy.sh/v86/bios/seabios.bin" },
                 vga_bios: { url: "https://copy.sh/v86/bios/vgabios.bin" },
-                fda: { url: "bootimage-NimbusOS.bin" },
+                fda: { url: "nimbus_os.bin" },
                 autostart: true,
             });
 
-            emulator.add_listener("emulator-ready", function() {
+            emulator.add_listener("emulator-ready", function () {
                 status.innerText = "System Ready. Booting NimbusOS...";
             });
 
-            emulator.add_listener("download-error", function() {
+            emulator.add_listener("download-error", function () {
                 status.innerText = "Error: Kernel image not found. Ensure 'bootimage-NimbusOS.bin' is in the same directory.";
                 status.style.color = "#f85149";
             });
         };
     </script>
 </body>
+
 </html>
