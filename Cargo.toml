@@ -5,6 +5,9 @@ edition = "2024"
 
 [dependencies]
 bootloader = "0.9"
+lazy_static = { version = "1.4", features = ["spin_no_std"] }
+spin = "0.9"
+x86_64 = "0.14.2"
 
 [package.metadata.bootloader]
 target = "x86_64-nimbus_os.json"

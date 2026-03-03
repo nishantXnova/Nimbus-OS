@@ -1,3 +1,7 @@
+use core::fmt;
+use lazy_static::lazy_static;
+use spin::Mutex;
+
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -81,7 +85,6 @@ impl Writer {
                 // not part of printable ASCII range
                 _ => self.write_byte(0xfe),
             }
-
         }
     }
 
@@ -105,16 +108,56 @@ impl Writer {
             self.buffer.chars[row][col] = blank;
         }
     }
+
+    /// USP: "The Pulse" - Draws a reactive status bar at the top
+    pub fn draw_pulse(&mut self, text: &str, color: Color) {
+        let color_code = ColorCode::new(Color::White, color);
+        for col in 0..BUFFER_WIDTH {
+            let character = if col < text.len() {
+                text.as_bytes()[col]
+            } else {
+                b' '
+            };
+            self.buffer.chars[0][col] = ScreenChar {
+                ascii_character: character,
+                color_code,
+            };
+        }
+    }
 }
 
-pub fn print_something() {
-    let mut writer = Writer {
+impl fmt::Write for Writer {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        self.write_string(s);
+        Ok(())
+    }
+}
+
+lazy_static! {
+    pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer {
         column_position: 0,
         color_code: ColorCode::new(Color::Yellow, Color::Black),
         buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
-    };
+    });
+}
 
-    writer.write_byte(b'H');
-    writer.write_string("ello ");
-    writer.write_string("Wörld!");
+#[macro_export]
+macro_rules! print {
+    ($($arg:tt)*) => ($crate::vga_buffer::_print(format_args!($($arg)*)));
+}
+
+#[macro_export]
+macro_rules! println {
+    () => ($crate::print!("\n"));
+    ($($arg:tt)*) => ($crate::print!("{}\n", format_args!($($arg)*)));
+}
+
+#[doc(hidden)]
+pub fn _print(args: fmt::Arguments) {
+    use core::fmt::Write;
+    WRITER.lock().write_fmt(args).unwrap();
+}
+
+pub fn init_status_bar() {
+    WRITER.lock().draw_pulse(" NIMBUS OS | SYSTEM ACTIVE ", Color::Blue);
 }

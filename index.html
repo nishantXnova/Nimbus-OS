@@ -21,7 +21,7 @@
 
         h1 {
             color: #58a6ff;
-            margin-bottom: 20px;
+            margin: 0;
             text-shadow: 0 0 10px rgba(88, 166, 255, 0.3);
         }
 
@@ -61,17 +61,40 @@
             background: #30363d;
             border-color: #8b949e;
         }
+
+        #log_container {
+            margin-top: 15px;
+            width: 640px;
+            height: 100px;
+            background: #000;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            color: #7ee787;
+            overflow-y: auto;
+            text-align: left;
+        }
     </style>
 </head>
 
 <body>
-    <h1>NimbusOS: First Light</h1>
+    <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 20px;">
+        <img src="logo.png" alt="NimbusOS Logo"
+            style="height: 60px; border-radius: 12px; box-shadow: 0 0 20px rgba(88, 166, 255, 0.4);">
+        <h1>NimbusOS: The Reactive Core</h1>
+    </div>
 
     <div id="screen_container">
         <canvas id="vga_canvas"></canvas>
     </div>
 
     <div class="status" id="status_text">Initialising v86...</div>
+
+    <div id="log_container">
+        <div>[System] Diagnostics starting...</div>
+    </div>
 
     <div class="controls">
         <button onclick="window.location.reload()">Reset System</button>
@@ -80,11 +103,18 @@
     <!-- v86 Emulator Library -->
     <script src="https://copy.sh/v86/build/v86_all.js"></script>
     <script>
+        function log(msg) {
+            var container = document.getElementById("log_container");
+            var div = document.createElement("div");
+            div.innerText = "[" + new Date().toLocaleTimeString() + "] " + msg;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
         window.onload = function () {
             var status = document.getElementById("status_text");
+            log("Loading assets...");
 
-            // Note: In a real GitHub Pages setup, the path would be to the built .bin file
-            // For local development, assume the file is named 'bootimage-NimbusOS.bin'
             var emulator = new V86Starter({
                 wasm_path: "https://copy.sh/v86/build/v86.wasm",
                 memory_size: 32 * 1024 * 1024,
@@ -97,12 +127,17 @@
 
             emulator.add_listener("emulator-ready", function () {
                 status.innerText = "System Ready. Booting NimbusOS...";
+                log("Emulator ready. Jumping to entry point.");
             });
 
-            emulator.add_listener("download-error", function () {
-                status.innerText = "Error: Kernel image not found. Ensure 'bootimage-NimbusOS.bin' is in the same directory.";
+            emulator.add_listener("download-error", function (e) {
+                status.innerText = "Error: Asset load failed.";
                 status.style.color = "#f85149";
+                log("Download Error. Check if nimbus_os.bin and logo.png exist.");
             });
+
+            status.innerText = "Waiting for boot...";
+            log("Waiting for v86 to signal ready.");
         };
     </script>
 </body>
