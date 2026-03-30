@@ -19,6 +19,7 @@ mod evolution;
 mod holomemory;
 mod consciousness;
 mod fractal;
+mod morphic;
 
 use core::panic::PanicInfo;
 
@@ -75,6 +76,7 @@ fn supernova_task() {
         if counter % 500000 == 0 {
             quantum::render_quantum();
             neural::render_neural(counter as f32 / 1000000.0);
+            morphic::render_morphic();
         }
     }
 }
@@ -123,6 +125,22 @@ pub extern "C" fn _start() -> ! {
     
     println!("[VGA]   Initializing visual interface...");
     vga_buffer::init_status_bar();
+    
+    // ══════════════════════════════════════════════════════════════════════════
+    // PHASE 6: MORPHIC MEMORY ENGINE - Self-Optimizing Memory
+    // ══════════════════════════════════════════════════════════════════════════
+    println!();
+    println!("╔═══════════════════════════════════════════════════════════════════════════╗");
+    println!("║                                                                       ║");
+    println!("║     ⬡ P H A S E   6 :   M O R P H I C   M E M O R Y   E N G I N E ⬡     ║");
+    println!("║                                                                       ║");
+    println!("║          Self-Optimizing • Self-Healing • Quantum-Inspired               ║");
+    println!("║                                                                       ║");
+    println!("╚═══════════════════════════════════════════════════════════════════════════╝");
+    println!();
+    
+    println!("[MORPHIC] Initializing Quantum Memory Blocks...");
+    morphic::init_morphic(0xFFFF_0000, 0xFFFF_FFFF);
     
     // ══════════════════════════════════════════════════════════════════════════
     // 12-LAYER VISUALIZATION MATRIX
@@ -240,6 +258,7 @@ pub extern "C" fn _start() -> ! {
     quantum::render_quantum();
     gravity::render_gravity();
     nebula::render_nebula();
+    morphic::render_morphic();
     neural::render_neural(0.0);
     
     // ══════════════════════════════════════════════════════════════════════════
