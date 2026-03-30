@@ -1,13 +1,13 @@
 [package]
 name = "NimbusOS"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 
 [dependencies]
 bootloader = "0.9"
 lazy_static = { version = "1.4", features = ["spin_no_std"] }
 spin = "0.9"
-x86_64 = "0.14.2"
+x86_64 = { version = "0.14.2", features = ["instructions", "structures"] }
 
 [package.metadata.bootloader]
 target = "x86_64-nimbus_os.json"
