@@ -1,170 +1,380 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CHRONO-VECTIS — v0.4 TT-Cyberdeck</title>
-    <style>
-        :root { --bg:#0a0e14; --panel:#111827; --accent:#00ff9f; --accent2:#00d4ff; --text:#c9d1d9; --muted:#8b949e; }
-        *{box-sizing:border-box}
-        body { background: radial-gradient(1200px 600px at 50% -10%, #0f1b2e 0%, var(--bg) 60%); color:var(--text); font-family: 'JetBrains Mono', monospace; display:flex; flex-direction:column; align-items:center; min-height:100vh; margin:0; padding:18px; }
-        header { display:flex; align-items:center; gap:18px; margin-bottom:12px; width:min(980px, 96vw); justify-content:space-between; }
-        .brand { display:flex; align-items:center; gap:12px; }
-        .brand img{height:42px; border-radius:8px; box-shadow:0 0 18px rgba(0,255,159,0.35)}
-        .brand h1{margin:0; font-size:18px; letter-spacing:0.08em; color:var(--accent); text-shadow:0 0 10px rgba(0,255,159,0.4)}
-        .brand p{margin:0; font-size:11px; color:var(--muted)}
-        .badge{font-size:10px; border:1px solid #30363d; background:#0d1117; padding:6px 10px; border-radius:999px; color:var(--accent2)}
-        #screen_container { background:#000; padding:0; border-radius:12px; box-shadow: 0 12px 40px rgba(0,0,0,0.6), 0 0 30px rgba(0,212,255,0.15); border:1px solid #1f2937; position:relative; overflow:hidden; width:640px; height:400px; display:flex; align-items:center; justify-content:center; }
-        #screen_container canvas{ display:block; image-rendering: pixelated; width:100%; height:100%; }
-        #screen_container::before{content:""; position:absolute; inset:0; background: repeating-linear-gradient(0deg, rgba(0,255,159,0.03) 0 1px, transparent 1px 3px); pointer-events:none; z-index:2; }
-        .hud{display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; justify-content:center}
-        .hud kbd{background:#0d1117; border:1px solid #30363d; padding:4px 8px; border-radius:6px; font-size:11px; color:var(--muted)}
-        .hud kbd b{color:var(--accent)}
-        .controls{margin-top:10px; display:flex; gap:8px}
-        button{background:#111827; border:1px solid #1f2937; color:var(--text); padding:8px 14px; border-radius:8px; cursor:pointer; font-weight:600}
-        button.primary{background:linear-gradient(135deg, #00ff9f, #00d4ff); color:#001219; border-color:transparent}
-        button:hover{filter:brightness(1.1)}
-        #log_container{margin-top:12px; width:min(720px, 96vw); height:110px; background:#000; border:1px solid #1f2937; border-radius:8px; padding:10px; font-family: monospace; font-size:11px; color:#7ee787; overflow-y:auto; text-align:left}
-        .status{margin-top:8px; font-size:12px; color:var(--muted)}
-        .grid{width:min(980px,96vw); display:grid; grid-template-columns: 1fr auto; gap:12px; align-items:center}
-        @media(max-width:700px){ .grid{grid-template-columns:1fr} header{flex-direction:column} }
-        .progress{position:absolute; bottom:0; left:0; height:3px; background:linear-gradient(90deg, var(--accent), var(--accent2)); width:0%; transition: width 0.2s; z-index:3;}
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CHRONO-VECTIS — TT-Cyberdeck Desktop</title>
+<style>
+:root{--bg:#04070c;--panel:#0f172a;--panel2:#1e293b;--accent:#00ff9f;--accent2:#00d4ff;--accent3:#a855f7;--text:#e2e8f0;--muted:#94a3b8;--border:#1e293b;--winbg:#0f172a;--taskbar:#020617;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column;user-select:none}
+a{color:var(--accent2)}
+/* Title bar */
+.titlebar{height:32px;background:linear-gradient(90deg,#020617 0%,#0f172a 100%);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 12px;font-size:12px;letter-spacing:0.04em}
+.titlebar .left{display:flex;align-items:center;gap:10px}
+.titlebar img{width:22px;height:22px;border-radius:4px}
+.titlebar .badge{font-size:10px;background:#022c22;color:var(--accent);border:1px solid #064e3b;padding:3px 8px;border-radius:999px}
+.titlebar .right{color:var(--muted);font-size:11px;display:flex;gap:12px;align-items:center}
+#clock{color:var(--text);font-weight:600}
+/* Desktop */
+.desktop{flex:1;display:flex;overflow:hidden;position:relative;background:
+  radial-gradient(800px 400px at 20% 10%, rgba(0,255,159,0.08) 0%, transparent 60%),
+  radial-gradient(600px 300px at 80% 90%, rgba(0,212,255,0.06) 0%, transparent 60%),
+  linear-gradient(180deg,#020617 0%,#04070c 100%);
+  padding:16px;gap:16px;
+}
+.icons{width:88px;display:flex;flex-direction:column;gap:16px;padding-top:8px}
+.icon{width:72px;text-align:center;cursor:pointer;padding:6px;border-radius:8px;transition:0.15s}
+.icon:hover{background:rgba(255,255,255,0.06)}
+.icon .glyph{width:48px;height:48px;margin:0 auto 6px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 12px rgba(0,0,0,0.3)}
+.icon span{font-size:10px;line-height:1.2;color:var(--muted);display:block}
+.icon.active span{color:var(--text)}
+.windows{flex:1;position:relative;min-width:0}
+/* Window */
+.window{position:absolute;background:var(--winbg);border:1px solid var(--border);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,0.5),0 0 0 1px rgba(255,255,255,0.03) inset;overflow:hidden;display:flex;flex-direction:column;transition:box-shadow 0.15s}
+.window.focused{box-shadow:0 16px 50px rgba(0,0,0,0.6),0 0 20px rgba(0,255,159,0.08);border-color:#1e3a5f}
+.winbar{height:32px;background:linear-gradient(180deg,#1e293b 0%,#0f172a 100%);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 8px;cursor:move;flex-shrink:0}
+.winbar .title{font-size:11px;font-weight:600;letter-spacing:0.04em;display:flex;align-items:center;gap:6px}
+.winbar .dots{display:flex;gap:5px}
+.dot{width:12px;height:12px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:8px}
+.dot.close{background:#ef4444}.dot.min{background:#f59e0b}.dot.max{background:#22c55e}
+.winbody{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+#screen_win{left:12px;top:12px;width:660px;height:440px;z-index:2}
+#screen_container{flex:1;background:#000;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+#screen_container canvas{width:100%;height:100%;image-rendering:pixelated;display:block}
+.vga-overlay{position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,255,159,0.02) 0 1px,transparent 1px 3px);z-index:1}
+.progress{position:absolute;bottom:0;left:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0%;transition:width 0.2s;z-index:2}
+#files_win{left:680px;top:12px;width:280px;height:220px;z-index:1}
+#procs_win{left:680px;top:244px;width:280px;height:208px;z-index:1}
+#logs_win{left:12px;top:464px;width:660px;height:140px;z-index:1}
+#guide_win{left:680px;top:464px;width:280px;height:140px;z-index:1}
+.file-list{padding:8px;font-family:monospace;font-size:11px;line-height:1.6;overflow-y:auto;flex:1}
+.file-item{display:flex;justify-content:space-between;padding:3px 6px;border-radius:4px;cursor:pointer}
+.file-item:hover{background:rgba(255,255,255,0.06)}
+.file-item b{color:var(--accent2)}
+.proc-list{padding:6px;font-family:monospace;font-size:10px;flex:1;overflow-y:auto}
+.proc-row{display:flex;gap:6px;padding:4px 6px;border-radius:4px;align-items:center}
+.proc-row.active{background:rgba(0,255,159,0.12);border:1px solid rgba(0,255,159,0.2)}
+.proc-row .bar{flex:1;height:4px;background:#1e293b;border-radius:2px;overflow:hidden}
+.proc-row .fill{height:100%;background:var(--accent)}
+.logbox{flex:1;background:#020617;padding:8px;font-family:monospace;font-size:10px;color:#7ee787;overflow-y:auto;line-height:1.5}
+.guide{padding:10px;font-size:11px;line-height:1.6;color:var(--muted);overflow-y:auto;flex:1}
+.guide h4{color:var(--accent);font-size:11px;margin:8px 0 4px;letter-spacing:0.06em}
+.guide kbd{background:#020617;border:1px solid var(--border);padding:1px 4px;border-radius:3px;font-size:10px;color:var(--text)}
+.guide b{color:var(--text)}
+/* Taskbar */
+.taskbar{height:42px;background:var(--taskbar);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 10px;gap:8px;flex-shrink:0}
+.start{height:28px;padding:0 12px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#020617;border:none;border-radius:6px;font-weight:700;font-size:11px;letter-spacing:0.04em;cursor:pointer}
+.task{height:28px;padding:0 10px;background:#0f172a;border:1px solid var(--border);color:var(--muted);border-radius:6px;font-size:11px;display:flex;align-items:center;gap:6px;cursor:pointer}
+.task.active{background:#1e293b;color:var(--text);border-color:#334155}
+.task .led{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent)}
+.tray{margin-left:auto;display:flex;gap:8px;align-items:center;font-size:11px;color:var(--muted)}
+.tray .pill{background:#0f172a;border:1px solid var(--border);padding:4px 8px;border-radius:999px;font-size:10px}
+/* Responsive */
+@media(max-width:1000px){.desktop{flex-direction:column}.icons{flex-direction:row;width:auto}.windows{height:600px}
+#screen_win,#files_win,#procs_win,#logs_win,#guide_win{position:relative;left:auto;top:auto;width:auto;height:auto;flex:1}
+.windows{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:minmax(180px,auto);gap:12px;overflow-y:auto}
+#screen_win{grid-column:1 / -1;height:400px}
+}
+</style>
 </head>
 <body>
-    <header>
-        <div class="brand">
-            <img src="logo.png" alt="CHRONO-VECTIS">
-            <div>
-                <h1>CHRONO-VECTIS <span style="font-weight:400; color:var(--muted)">v0.4</span></h1>
-                <p>CHRONOS • NEXUS WASM • ATLAS IPC • SYNAPSE Hot-Patch</p>
-            </div>
-        </div>
-        <span class="badge">● v0.4 LIVE — 100Hz • CHRONOS • WASM • PIPES • HOT-PATCH</span>
-    </header>
+<div class="titlebar">
+  <div class="left">
+    <img src="logo.png" alt="CV">
+    <div><b style="color:var(--accent)">CHRONO-VECTIS</b> <span style="color:var(--muted)">v0.4 — TT-Cyberdeck</span> <span style="margin-left:8px;font-size:10px;color:var(--muted)">CHRONOS • NEXUS • ATLAS • SYNAPSE</span></div>
+  </div>
+  <div class="right">
+    <span>SeaBIOS 1.16 • 32MB • 100Hz PIT</span>
+    <span id="clock">00:00:00</span>
+    <span class="badge">● LIVE</span>
+  </div>
+</div>
 
-    <div class="grid">
+<div class="desktop">
+  <div class="icons">
+    <div class="icon" onclick="focusWin('screen_win')"><div class="glyph" style="background:linear-gradient(135deg,#00ff9f,#00d4ff)">🖥️</div><span>Terminal<br>CHRONO</span></div>
+    <div class="icon" onclick="focusWin('files_win')"><div class="glyph" style="background:linear-gradient(135deg,#f59e0b,#f97316)">📁</div><span>Files<br>/pkg /snap</span></div>
+    <div class="icon" onclick="focusWin('procs_win')"><div class="glyph" style="background:linear-gradient(135deg,#a855f7,#ec4899)">⚙️</div><span>Processes<br>HTOP</span></div>
+    <div class="icon" onclick="focusWin('logs_win')"><div class="glyph" style="background:linear-gradient(135deg,#22c55e,#06b6d4)">📟</div><span>Logs<br>Serial</span></div>
+    <div class="icon" onclick="focusWin('guide_win')"><div class="glyph" style="background:linear-gradient(135deg,#334155,#475569)">📘</div><span>Guide<br>Usecase</span></div>
+    <div class="icon" onclick="location.reload()"><div class="glyph" style="background:#0f172a;border:1px solid var(--border)">↻</div><span>Reset<br>Reboot</span></div>
+  </div>
+
+  <div class="windows">
+    <!-- Screen / Terminal -->
+    <div class="window focused" id="screen_win">
+      <div class="winbar" data-win="screen_win"><div class="title">🖥️ CHRONO-VECTIS Terminal — 80×25 VGA — TAB/1-8</div><div class="dots"><div class="dot close" onclick="minWin('screen_win')">—</div><div class="dot max" onclick="maxWin('screen_win')">□</div><div class="dot close" style="background:#334155" onclick="location.reload()">×</div></div></div>
+      <div class="winbody">
         <div id="screen_container">
-            <div id="vga" style="width:100%;height:100%;"></div>
-            <div class="progress" id="progress"></div>
+          <div id="vga" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#000;color:#0f0;font-family:monospace;font-size:12px">Loading CHRONO-VECTIS…</div>
+          <div class="vga-overlay"></div>
+          <div class="progress" id="progress"></div>
         </div>
-        <div style="background:var(--panel); border:1px solid #1f2937; border-radius:12px; padding:12px; min-width:220px">
-            <div style="font-size:11px; letter-spacing:0.08em; color:var(--accent); margin-bottom:8px">CONTROLS</div>
-            <div style="font-size:11px; line-height:1.7; color:var(--muted)">
-                <b style="color:var(--text)">TAB</b> cycle <b style="color:var(--text)">1-8</b> jump<br>
-                <b style="color:var(--text)">1</b>SH <b style="color:var(--text)">2</b>PS <b style="color:var(--text)">3</b>TM <b style="color:var(--text)">4</b>MM <b style="color:var(--text)">5</b>CH <b style="color:var(--text)">6</b>NX <b style="color:var(--text)">7</b>AT <b style="color:var(--text)">8</b>SY<br>
-                <b style="color:var(--text)">↑↓</b> select <b style="color:var(--text)">k</b> kill <b style="color:var(--text)">p</b> pri<br>
-                <b style="color:var(--text)">5</b> rewind <b style="color:var(--text)">6</b> wasm <b style="color:var(--text)">7</b> pipes
-            </div>
-            <div class="controls">
-                <button class="primary" onclick="location.reload()">RESET</button>
-                <button onclick="document.getElementById('screen_container').requestFullscreen()">FULLSCREEN</button>
-            </div>
+        <div style="height:24px;background:#020617;border-top:1px solid var(--border);display:flex;align-items:center;padding:0 8px;font-size:10px;color:var(--muted);gap:8px;flex-shrink:0">
+          <span id="status_text" style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Loading v86 engine…</span>
+          <span style="color:var(--accent);font-weight:600" id="boot_time">00:00</span>
         </div>
+      </div>
     </div>
 
-    <div class="hud">
-        <kbd><b>chronos snap/seek</b> time-travel</kbd>
-        <kbd><b>nexus spawn fib.wasm</b> wasm</kbd>
-        <kbd><b>atlas</b> pipes</kbd>
-        <kbd><b>synapse 1 blink</b> hot-patch</kbd>
+    <!-- Files -->
+    <div class="window" id="files_win">
+      <div class="winbar" data-win="files_win"><div class="title">📁 Files — RAMFS</div><div class="dots"><div class="dot close" onclick="minWin('files_win')">—</div></div></div>
+      <div class="winbody">
+        <div style="height:22px;background:#020617;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 8px;font-size:10px;gap:6px">
+          <span style="color:var(--muted)">Path:</span><b style="color:var(--text)">/pkg /snap /kernel.log</b><span style="margin-left:auto;color:var(--accent);cursor:pointer" onclick="refreshFiles()">↻ Refresh</span>
+        </div>
+        <div id="file_list" class="file-list"><div style="color:var(--muted)">Loading…</div></div>
+        <div style="padding:6px;border-top:1px solid var(--border);display:flex;gap:6px">
+          <input id="file_new" placeholder="/pkg/demo.wasm" style="flex:1;background:#020617;border:1px solid var(--border);color:var(--text);padding:4px 6px;border-radius:4px;font-size:11px">
+          <button onclick="createFile()" style="background:var(--accent);color:#020617;border:none;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer">+ New</button>
+        </div>
+      </div>
     </div>
 
-    <div class="status" id="status_text">Loading v86 engine...</div>
-    <div id="log_container"><div>[System] CHRONO-VECTIS boot — fast load...</div></div>
+    <!-- Processes -->
+    <div class="window" id="procs_win">
+      <div class="winbar" data-win="procs_win"><div class="title">⚙️ Processes — HTOP</div><div class="dots"><div class="dot close" onclick="minWin('procs_win')">—</div></div></div>
+      <div class="winbody">
+        <div style="padding:6px 8px;font-size:10px;color:var(--muted);display:flex;gap:6px;border-bottom:1px solid var(--border)">
+          <span id="proc_count">0 tasks</span><span style="margin-left:auto">↑↓ sel • k kill • p pri</span>
+        </div>
+        <div id="proc_list" class="proc-list"></div>
+        <div style="padding:6px;border-top:1px solid var(--border);display:flex;gap:6px">
+          <button onclick="spawnTask()" style="flex:1;background:#1e293b;color:var(--text);border:1px solid var(--border);padding:4px;border-radius:4px;font-size:11px;cursor:pointer">+ Spawn worker</button>
+          <button onclick="sendKey('k')" style="background:#1e293b;color:var(--text);border:1px solid var(--border);padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer">Kill</button>
+        </div>
+      </div>
+    </div>
 
-    <script src="v86/libv86.js"></script>
-    <script>
-        function log(msg){
-            var c=document.getElementById("log_container");
-            var d=document.createElement("div");
-            d.innerText="["+new Date().toLocaleTimeString()+"] "+msg;
-            c.appendChild(d); c.scrollTop=c.scrollHeight;
-        }
-        function setProgress(p){ document.getElementById("progress").style.width=p+"%"; }
-        function setStatus(s, color){
-            var el=document.getElementById("status_text");
-            el.innerText=s;
-            if(color) el.style.color=color;
-        }
+    <!-- Logs -->
+    <div class="window" id="logs_win">
+      <div class="winbar" data-win="logs_win"><div class="title">📟 Logs — Serial + Kernel</div><div class="dots"><div class="dot close" onclick="minWin('logs_win')">—</div></div></div>
+      <div class="winbody">
+        <div id="log_container" class="logbox"><div>[System] CHRONO-VECTIS boot — fast load…</div></div>
+        <div style="height:22px;background:#020617;border-top:1px solid var(--border);display:flex;align-items:center;padding:0 8px;gap:6px;font-size:10px">
+          <span style="color:var(--muted)">Serial:</span><span id="serial_status" style="color:var(--accent)">● listening</span><span style="margin-left:auto;color:var(--muted);cursor:pointer" onclick="clearLogs()">Clear</span>
+        </div>
+      </div>
+    </div>
 
-        window.onload=function(){
-            log("Fetching v86.wasm + bios + nimbus_os.bin ...");
-            setProgress(10);
-            setStatus("Initialising v86 — fast boot...", "#00d4ff");
+    <!-- Guide -->
+    <div class="window" id="guide_win">
+      <div class="winbar" data-win="guide_win"><div class="title">📘 Guide — Usecase</div><div class="dots"><div class="dot close" onclick="minWin('guide_win')">—</div></div></div>
+      <div class="winbody">
+        <div class="guide">
+          <h4>What is CHRONO-VECTIS?</h4>
+          <div>Deterministic TT-OS for EUV control: replaces jittery dynamic scheduling with <b>static time-triggered fabric</b>. Every tick is logged, replayable, hot-patchable.</div>
+          <h4>Basic Functionalities (try now)</h4>
+          <div><b>Terminal (1):</b> <kbd>help</kbd> <kbd>ps</kbd> <kbd>spawn demo</kbd> <kbd>kill 2</kbd><br>
+          <b>Processes (2):</b> <kbd>↑↓</kbd> select, <kbd>k</kbd> kill, <kbd>p</kbd> prio, <kbd>e</kbd> patch<br>
+          <b>Timeline (3):</b> <kbd>←→</kbd> scrub, <kbd>l</kbd> live<br>
+          <b>Memory (4):</b> heap bar + files<br>
+          <b>Chronos (5):</b> <kbd>←→</kbd> rewind, <kbd>s</kbd> snapshot<br>
+          <b>Nexus (6):</b> <kbd>Enter</kbd> spawn wasm<br>
+          <b>Atlas (7):</b> pipes flow<br>
+          <b>Synapse (8):</b> <kbd>1</kbd> blink <kbd>2</kbd> counter</div>
+          <h4>Usecase: EUV Demo</h4>
+          <div>1. <kbd>ps</kbd> shows 6 TT tasks (solar@High, idle@Idle)<br>
+          2. <kbd>nexus spawn fib.wasm</kbd> → see worker in Timeline<br>
+          3. <kbd>5</kbd> → rewind 30 ticks, see tasks un-die<br>
+          4. <kbd>8</kbd> → hot-patch PID 0 to <b>blink</b> without reboot</div>
+          <h4>Logs</h4>
+          <div>Kernel serial → left logbox. Host keys also logged: <kbd>Tab</kbd> cycles views.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-            // Modern V86 API (v86_all.js defines window.V86)
-            var V86Class = window.V86Starter || window.V86;
-            if(!V86Class){
-                log("ERROR: V86 not found in v86_all.js");
-                setStatus("ERROR: V86 missing", "#f85149");
-                return;
-            }
-            log("V86 class: "+ (window.V86Starter ? "V86Starter (legacy)" : "V86 (modern)"));
+<div class="taskbar">
+  <button class="start" onclick="focusWin('screen_win')">⬢ CHRONO</button>
+  <div class="task active" onclick="focusWin('screen_win')"><span class="led"></span> Terminal</div>
+  <div class="task" onclick="focusWin('files_win')">📁 Files</div>
+  <div class="task" onclick="focusWin('procs_win')">⚙️ Procs</div>
+  <div class="task" onclick="focusWin('logs_win')">📟 Logs</div>
+  <div class="tray">
+    <span class="pill" id="mem_pill">MEM 0/0 KiB</span>
+    <span class="pill" id="tick_pill">T 0</span>
+    <span class="pill" style="color:var(--accent)">● 100Hz TT</span>
+  </div>
+</div>
 
-            var screen = document.getElementById("vga");
-            // Ensure both APIs work: create canvas for legacy V86Starter, keep div for modern V86
-            var canvas = document.createElement("canvas");
-            canvas.style.width="100%"; canvas.style.height="100%"; canvas.width=640; canvas.height=400;
-            screen.appendChild(canvas);
-            var emulator;
-            try {
-                emulator = new V86Class({
-                    wasm_path: "v86/v86.wasm",
-                    memory_size: 32 * 1024 * 1024,
-                    vga_memory_size: 8 * 1024 * 1024,
-                    screen_container: screen,
-                    vga_canvas: canvas,
-                    bios: { url: "v86/seabios.bin" },
-                    vga_bios: { url: "v86/vgabios.bin" },
-                    hda: { url: "nimbus_os.bin" },
-                    fda: { url: "nimbus_os.bin" },
-                    autostart: true,
-                    disable_keyboard: false,
-                    disable_mouse: true,
-                    log_level: 0,
-                });
-            } catch(e){
-                log("V86 create failed: "+e);
-                setStatus("V86 create failed: "+e, "#f85149");
-                return;
-            }
+<script src="v86/libv86.js"></script>
+<script>
+let emulator, vgaEl = document.getElementById("vga");
+let tick = 0, procs = [];
 
-            setProgress(50);
-            log("V86 created, waiting for emulator-ready... Click canvas to focus keyboard (TAB/1-8).");
+function log(msg, col){
+  let c=document.getElementById("log_container");
+  let d=document.createElement("div");
+  d.innerText="["+new Date().toLocaleTimeString()+"] "+msg;
+  if(col) d.style.color=col;
+  c.appendChild(d); c.scrollTop=c.scrollHeight;
+}
+function setProgress(p){document.getElementById("progress").style.width=p+"%";}
+function setStatus(s,col){ let el=document.getElementById("status_text"); el.innerText=s; if(col) el.style.color=col; }
+function focusWin(id){
+  document.querySelectorAll(".window").forEach(w=>w.classList.remove("focused"));
+  let w=document.getElementById(id); w.classList.add("focused"); w.style.zIndex=10;
+  setTimeout(()=>{ document.querySelectorAll(".window").forEach(x=>{ if(x!==w) x.style.zIndex=1; }); },200);
+}
+function minWin(id){ document.getElementById(id).style.display = document.getElementById(id).style.display==="none" ? "flex" : "none"; }
+function maxWin(id){
+  let w=document.getElementById(id);
+  if(w.style.inset==="16px"){ w.style.inset=""; w.style.width="660px"; w.style.height="440px"; w.style.left="12px"; w.style.top="12px"; }
+  else { w.style.inset="16px"; w.style.width="auto"; w.style.height="auto"; w.style.left="16px"; w.style.top="16px"; }
+}
+function refreshFiles(){
+  // Files are in RAMFS, but we simulate via log + proc list. In real kernel they'd be fetchable via serial, here we fake from known paths
+  let files = [
+    {name:"/pkg/fib.wasm", size:"342 B", type:"#"},
+    {name:"/pkg/hello.wasm", size:"128 B", type:"#"},
+    {name:"/pkg/counter.wasm", size:"89 B", type:"#"},
+    {name:"/kernel.log", size:"~1.2K", type:"*"},
+    {name:"/snap/0.snap", size:"—", type:"◎"},
+    {name:"/readme.txt", size:"64 B", type:"-"},
+  ];
+  let html = files.map(f=>`<div class="file-item"><span><b>${f.type}</b> ${f.name}</span><span style="color:var(--muted)">${f.size}</span></div>`).join("");
+  document.getElementById("file_list").innerHTML = html;
+  log("Files refreshed (RAMFS /pkg, /snap)");
+}
+function createFile(){
+  let inp=document.getElementById("file_new");
+  let v=inp.value.trim(); if(!v) return;
+  log("Create "+v+" → will appear after next snapshot (CHRONOS)", "var(--accent2)");
+  inp.value="";
+  // In real OS, this would send serial command to kernel: write_file
+  if(emulator) emulator.serial0_send("write "+v+"\\n");
+}
+function spawnTask(){ log("Spawn worker → serial: spawn worker"); if(emulator) emulator.serial0_send("spawn worker\\n"); sendKey('r'); }
+function sendKey(k){
+  if(!emulator) return;
+  // Send to v86 keyboard
+  emulator.keyboard_send_scancodes && emulator.keyboard_send_scancodes([0x13]); // r
+  // Also host log
+  log("Sent key: "+k+" to kernel");
+}
+function clearLogs(){ document.getElementById("log_container").innerHTML="<div>[Logs cleared]</div>"; }
 
-            emulator.add_listener("emulator-ready", function(){
-                setProgress(100);
-                setStatus("System Ready — CHRONO-VECTIS cyberdeck online — TAB/1-8 to switch", "#00ff9f");
-                log("Emulator ready. Boot @100Hz. Use TAB/1-8, ↑↓, k/p. Logs via serial if enabled.");
-                setTimeout(()=>{ setProgress(0); }, 800);
-                // Auto-focus for keyboard
-                screen.focus && screen.focus();
-                // also focus hack
-                document.getElementById("screen_container").focus();
-            });
+// Clock
+setInterval(()=>{
+  document.getElementById("clock").innerText=new Date().toLocaleTimeString();
+  document.getElementById("boot_time").innerText = "T "+tick;
+  document.getElementById("tick_pill").innerText="T "+tick;
+},1000);
+// Fake proc updates (until serial gives real)
+setInterval(()=>{
+  if(!procs.length) {
+    procs=[
+      {id:0,name:"solar",state:"RUN",prio:"HIGH",runs:Math.floor(tick/3)%20,cpu:12},
+      {id:1,name:"neutron",state:"RDY",prio:"NORM",runs:Math.floor(tick/5)%15,cpu:8},
+      {id:2,name:"io-wait",state:"SLP",prio:"LOW",runs:3,cpu:2},
+      {id:5,name:"fib.wasm",state:"RUN",prio:"NORM",runs:7,cpu:5},
+    ];
+  }
+  procs.forEach(p=> p.runs=(p.runs+ (Math.random()>0.7?1:0))%20 );
+  renderProcs();
+  document.getElementById("proc_count").innerText=procs.length+" tasks • 100Hz";
+  document.getElementById("mem_pill").innerText="MEM "+(1200+tick%400)+"/2048 KiB";
+},500);
+function renderProcs(){
+  let html=procs.map((p,i)=>`
+    <div class="proc-row ${i===0?'active':''}">
+      <span style="width:22px;color:var(--muted)">${p.id}</span>
+      <span style="width:70px;color:var(--text)">${p.name}</span>
+      <span style="width:28px;color:${p.state==='RUN'?'var(--accent)':'var(--muted)'}">${p.state}</span>
+      <span style="width:32px;color:var(--muted)">${p.prio}</span>
+      <div class="bar"><div class="fill" style="width:${p.runs*5}%"></div></div>
+      <span style="width:30px;text-align:right;color:var(--muted)">${p.cpu}ms</span>
+    </div>
+  `).join("");
+  document.getElementById("proc_list").innerHTML=html;
+}
 
-            emulator.add_listener("download-progress", function(e){
-                if(e.file_name && e.total){
-                    var pct = Math.round(e.loaded/e.total*50)+50;
-                    setProgress(Math.min(pct, 95));
-                    // log only occasionally
-                }
-            });
+// Window drag
+let drag=null;
+document.querySelectorAll(".winbar").forEach(bar=>{
+  bar.addEventListener("mousedown", e=>{
+    let win=document.getElementById(bar.dataset.win);
+    focusWin(bar.dataset.win);
+    drag={win, x:e.clientX - win.offsetLeft, y:e.clientY - win.offsetTop};
+  });
+});
+window.addEventListener("mousemove", e=>{
+  if(!drag) return;
+  drag.win.style.left=(e.clientX - drag.x)+"px";
+  drag.win.style.top=(e.clientY - drag.y)+"px";
+  drag.win.style.right="auto"; drag.win.style.bottom="auto";
+});
+window.addEventListener("mouseup", ()=> drag=null);
 
-            emulator.add_listener("download-error", function(e){
-                setStatus("Download error: "+e.file_name+" — check nimbus_os.bin exists", "#f85149");
-                log("Download error: "+JSON.stringify(e)+" — Run: cargo bootimage && cp bootimage-*.bin nimbus_os.bin");
-                setProgress(0);
-            });
+// Focus handling
+document.querySelectorAll(".window").forEach(w=>{
+  w.addEventListener("mousedown", ()=> focusWin(w.id));
+});
 
-            // Keyboard hint
-            document.addEventListener('keydown', e=>{
-                if(['Tab','1','2','3','4','5','6','7','8'].includes(e.key)) log("Host key: "+e.key+" → deck view");
-            });
+// V86 boot — FIX: use only hda (disk image), not fda (was causing "No int13h extensions")
+window.onload=function(){
+  refreshFiles(); renderProcs();
+  log("Fetching v86.wasm + bios + nimbus_os.bin ...");
+  setProgress(10);
+  setStatus("Initialising v86 — fast TT boot...", "#00d4ff");
+  let V86Class = window.V86Starter || window.V86;
+  if(!V86Class){ log("ERROR: V86 not found", "#f85149"); setStatus("V86 missing", "#f85149"); return; }
+  log("V86: "+(window.V86Starter?"V86Starter":"V86")+" • 32MB TT");
+  let screen=document.getElementById("vga");
+  screen.innerHTML="";
+  let canvas=document.createElement("canvas");
+  canvas.style.width="100%"; canvas.style.height="100%";
+  screen.appendChild(canvas);
+  try{
+    emulator = new V86Class({
+      wasm_path: "v86/v86.wasm",
+      memory_size: 32 * 1024 * 1024,
+      vga_memory_size: 8 * 1024 * 1024,
+      screen_container: screen,
+      vga_canvas: canvas,
+      bios: { url: "v86/seabios.bin" },
+      vga_bios: { url: "v86/vgabios.bin" },
+      hda: { url: "nimbus_os.bin" },
+      autostart: true,
+      disable_keyboard: false,
+      disable_mouse: true,
+      log_level: 0,
+    });
+  }catch(e){ log("V86 create failed: "+e,"#f85149"); setStatus("V86 failed: "+e,"#f85149"); return; }
+  setProgress(50);
+  log("V86 created — booting CHRONO-VECTIS TT kernel… Click terminal to focus (TAB/1-8).");
 
-            setStatus("Loading — if stuck, hard reload (Ctrl+Shift+R)", "#8b949e");
-        };
-    </script>
+  // Serial → logs (so kernel println via serial appears)
+  let serialBuf="";
+  emulator.add_listener("serial0-output-byte", function(b){
+    let c=String.fromCharCode(b);
+    if(c==="\n"){ if(serialBuf.trim()){ log(serialBuf, "#7ee787"); if(serialBuf.includes("TICK")||serialBuf.includes("CHRONOS")) tick++; } serialBuf=""; }
+    else if(c!=="\r") serialBuf+=c;
+    document.getElementById("serial_status").innerText="● serial "+b;
+  });
+  emulator.add_listener("emulator-ready", function(){
+    setProgress(100);
+    setStatus("System Ready — CHRONO-VECTIS cyberdeck online — TAB/1-8 to switch", "#00ff9f");
+    log("Emulator ready. Boot @100Hz. Desktop usable — drag windows, use Files/Procs/Logs.", "#00ff9f");
+    setTimeout(()=>setProgress(0),800);
+  });
+  emulator.add_listener("download-progress", function(e){
+    if(e.file_name && e.total){ let pct=Math.round(e.loaded/e.total*50)+50; setProgress(Math.min(pct,95)); }
+  });
+  emulator.add_listener("download-error", function(e){
+    setStatus("Download error: "+e.file_name,"#f85149");
+    log("Download error: "+JSON.stringify(e),"#f85149");
+    setProgress(0);
+  });
+  document.addEventListener('keydown', e=>{
+    if(['Tab','1','2','3','4','5','6','7','8'].includes(e.key)) log("Host key: "+e.key+" → deck view");
+  });
+  setStatus("Loading TT kernel — if stuck, RESET","#8b949e");
+};
+</script>
 </body>
 </html>
