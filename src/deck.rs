@@ -2,7 +2,7 @@
 //! Single compositor owns 80x25. Tab cycles, 1-8 jump, context keys per view.
 
 extern crate alloc;
-use alloc::{string::String, vec::Vec, format};
+use alloc::{string::{String, ToString}, vec::Vec, format};
 use spin::Mutex;
 use lazy_static::lazy_static;
 use crate::vga_buffer::{Color, BUFFER_WIDTH, BUFFER_HEIGHT};
@@ -95,7 +95,7 @@ impl Deck {
             "clear"=>self.shell_log.clear(),
             "kill"=>{ if let Some(id)=p.get(1).and_then(|s| s.parse::<u64>().ok()){ let ok=SCHEDULER.kill(id); crate::chronos::record_kill(id); self.shell_log.push(if ok{format!("killed {}",id)}else{format!("no pid {}",id)});} else{ self.shell_log.push("usage: kill <id>".into()); } },
             "pri"=>{ if p.len()>=3{ if let Ok(id)=p[1].parse::<u64>(){ let pr=match p[2]{"high"=>Priority::High,"low"=>Priority::Low,_=>Priority::Normal}; let ok=SCHEDULER.set_priority(id,pr); self.shell_log.push(if ok{format!("pid {} -> {:?}",id,pr)}else{"no pid".into()}); } } else{ self.shell_log.push("usage: pri <id> high|normal|low".into()); } },
-            "spawn"=>{ let n=p.get(1).copied().unwrap_or("task"); let leaked: &'static str=alloc::boxed::Box::leak(n.to_string().into_boxed_str()); let id=crate::scheduler::spawn(leaked, crate::main::dummy_task as u64, 4096); if let Some(pid)=id{ crate::chronos::record_spawn(pid); } self.shell_log.push(format!("spawned {:?} -> {:?}", n, id)); },
+            "spawn"=>{ let n=p.get(1).copied().unwrap_or("task"); let leaked: &'static str=alloc::boxed::Box::leak(n.to_string().into_boxed_str()); let id=crate::scheduler::spawn(leaked, crate::dummy_task as u64, 4096); if let Some(pid)=id{ crate::chronos::record_spawn(pid); } self.shell_log.push(format!("spawned {:?} -> {:?}", n, id)); },
             "chronos"=>{ match p.get(1).copied(){ Some("snap")=>{ crate::chronos::take_snapshot(); self.shell_log.push("snapshot taken".into()); }, Some("live")=>{ self.chronos_live=true; self.shell_log.push("chronos live".into()); }, Some("seek")=>{ if let Some(t)=p.get(2).and_then(|s| s.parse::<u64>().ok()){ self.chronos_seek=t; self.chronos_live=false; self.view=View::Chronos; self.shell_log.push(format!("seek -> {}",t)); } }, _=>{ self.shell_log.push(format!("chronos: {}", crate::chronos::stats_line())); } } },
             "nexus"=>{ match p.get(1).copied(){ Some("list")=>{ for m in crate::wasm::list_pkgs(){ self.shell_log.push(format!(" {} {}B {:?}", m.name, m.size, m.exports)); } }, Some("spawn")=>{ let pkg=p.get(2).copied().unwrap_or("fib.wasm"); let id=crate::wasm::spawn_wasm(pkg); self.shell_log.push(format!("nexus spawn {} -> {:?}", pkg, id)); }, _=>self.shell_log.push("nexus list | nexus spawn <pkg>".into()) } },
             "atlas"=>{ for (id,name,from,to,fill,sent,recv,_) in crate::ipc::list_pipes(){ self.shell_log.push(format!(" pipe{} {} {}->{} fill:{}% sent:{} recv:{}", id, name, from,to,fill,sent,recv)); } },
@@ -112,7 +112,7 @@ impl Deck {
             KeyEvent::Down=>self.selected=(self.selected+1).min(n-1),
             KeyEvent::Char('k')=>{ let id=SCHEDULER.tasks.lock().get(self.selected).map(|t| t.id).unwrap_or(0); SCHEDULER.kill(id); crate::chronos::record_kill(id); },
             KeyEvent::Char('p')=>{ let id=SCHEDULER.tasks.lock().get(self.selected).map(|t| t.id).unwrap_or(0); let cur=SCHEDULER.tasks.lock().get(self.selected).map(|t| t.priority).unwrap_or(Priority::Normal); let nxt=match cur{Priority::High=>Priority::Normal,Priority::Normal=>Priority::Low,_=>Priority::High}; SCHEDULER.set_priority(id,nxt); },
-            KeyEvent::Char('r')=>{ let id=crate::scheduler::spawn("spawned", crate::main::dummy_task as u64, 4096); if let Some(pid)=id{ crate::chronos::record_spawn(pid); } },
+            KeyEvent::Char('r')=>{ let id=crate::scheduler::spawn("spawned", crate::dummy_task as u64, 4096); if let Some(pid)=id{ crate::chronos::record_spawn(pid); } },
             KeyEvent::Char('e')=>{ // hot-patch selected
                 let id=SCHEDULER.tasks.lock().get(self.selected).map(|t| t.id).unwrap_or(0);
                 crate::synapse::hot_patch(id, crate::synapse::PatchKind::Counter);
@@ -295,7 +295,7 @@ impl Deck {
         w.set_position(1,4); w.write_str(&format!("{}  snaps:{} events:{}", crate::chronos::stats_line(), crate::chronos::snapshot_count(), crate::chronos::event_count()), Color::LightGray);
         // seek bar 50 chars
         w.set_position(1,5); w.write_str("[",Color::DarkGray);
-        let total=50; let pos=if self.tick>0{ (self.chronos_seek*total/self.tick) as usize } else {0};
+        let total:usize=50; let pos:usize=if self.tick>0{ ((self.chronos_seek as usize)*total/(self.tick as usize)) } else {0};
         for i in 0..total{ w.write_char(if i==pos{'^'}else if i<pos{'#'}else{'.'}, if i==pos{Color::Yellow}else{Color::Cyan}); }
         w.write_str("]",Color::DarkGray);
         // recent events

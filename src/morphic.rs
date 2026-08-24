@@ -1,10 +1,15 @@
 //! Morphic Memory Engine — now a REAL buddy-allocator visualizer
 //! Old quantum theater kept as veneer, but stats now reflect actual heap
 
+extern crate alloc;
+use alloc::{vec::Vec, string::String};
 use crate::vga_buffer::{WRITER, Color};
-use crate::consciousness::{ConsciousnessState, Emotion};
 use spin::Mutex;
 use lazy_static::lazy_static;
+
+// local stubs to avoid pulling legacy consciousness (float-heavy) into build
+#[derive(Debug, Clone, Copy, PartialEq)] pub enum ConsciousnessState { Dormant, Awakening, Aware, Focused, Energetic, Contemplative, Transcendent }
+#[derive(Debug, Clone, Copy, PartialEq)] pub enum Emotion { Calm, Curious, Excited, Focused, Anxious, Content, Overwhelmed }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum MemoryQuantumState { Hot, Warm, Cold, Superposition, Collapsed, Entangled, Decoherent }

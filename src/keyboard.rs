@@ -1,9 +1,8 @@
 //! PS/2 keyboard driver - IRQ1
 
-use spin::Mutex;
+use spin::{Mutex, Once};
 use lazy_static::lazy_static;
 use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
-use conquer_once::spin::OnceCell;
 
 #[derive(Debug, Clone, Copy)]
 pub enum KeyEvent { Char(char), Enter, Backspace, Tab, Escape, Up, Down, Left, Right, F(u8), Unknown }
@@ -16,6 +15,7 @@ pub struct KeyQueue {
 }
 impl KeyQueue {
     const fn new() -> Self { Self { buf: [None; 128], head: 0, tail: 0, len: 0 } }
+    fn is_empty(&self)->bool{ self.len==0 }
     fn push(&mut self, ev: KeyEvent) {
         if self.len < QUEUE_SIZE { self.buf[self.tail]=Some(ev); self.tail=(self.tail+1)%QUEUE_SIZE; self.len+=1; }
     }
@@ -26,15 +26,16 @@ impl KeyQueue {
 }
 
 lazy_static! { static ref QUEUE: Mutex<KeyQueue> = Mutex::new(KeyQueue::new()); }
-static KEYBOARD: OnceCell<Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>>> = OnceCell::uninit();
+static KEYBOARD: Once<Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>>> = Once::new();
 
 pub fn init_keyboard() {
     let kb = Keyboard::new(ScancodeSet1::new(), layouts::Us104Key, HandleControl::Ignore);
-    KEYBOARD.init_once(|| Mutex::new(kb));
+    KEYBOARD.call_once(|| Mutex::new(kb));
     crate::println!("[KBD] PS/2 keyboard initialized (IRQ1)");
 }
 pub fn on_scancode(scancode: u8) {
-    let mut kb = match KEYBOARD.try_get() { Some(m)=>m.lock(), None=>return };
+    let kb_cell = match KEYBOARD.get() { Some(m)=>m, None=>return };
+    let mut kb = kb_cell.lock();
     if let Ok(Some(ev)) = kb.add_byte(scancode) {
         if let Some(key) = kb.process_keyevent(ev) {
             let mapped = match key {

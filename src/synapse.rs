@@ -13,6 +13,7 @@ impl PatchKind {
     pub fn all()->[Self;4]{ [Self::BlinkRate, Self::Counter, Self::Loop, Self::Custom] }
 }
 
+#[derive(Clone)]
 pub struct Patch {
     pub tick: u64,
     pub pid: u64,

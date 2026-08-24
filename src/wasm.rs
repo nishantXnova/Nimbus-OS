@@ -3,7 +3,7 @@
 //! Packages live in ramfs /pkg/*.wasm, orchard view shows trees
 
 extern crate alloc;
-use alloc::{vec::Vec, string::String, format, collections::BTreeMap};
+use alloc::{vec::Vec, string::{String, ToString}, format, collections::BTreeMap};
 use spin::Mutex;
 use lazy_static::lazy_static;
 

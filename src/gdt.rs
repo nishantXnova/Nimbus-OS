@@ -21,15 +21,15 @@ lazy_static! {
 lazy_static! {
     static ref GDT: (GlobalDescriptorTable, SegmentSelector, SegmentSelector) = {
         let mut gdt = GlobalDescriptorTable::new();
-        let code = gdt.add_entry(Descriptor::kernel_code_segment());
-        let data = gdt.add_entry(Descriptor::kernel_data_segment());
-        gdt.add_entry(Descriptor::tss_segment(&TSS));
+        let code = gdt.append(Descriptor::kernel_code_segment());
+        let data = gdt.append(Descriptor::kernel_data_segment());
+        gdt.append(Descriptor::tss_segment(&TSS));
         (gdt, code, data)
     };
 }
 
 pub fn init_gdt() {
-    use x86_64::instructions::segmentation::{CS, DS};
+    use x86_64::instructions::segmentation::{CS, DS, Segment};
     use x86_64::instructions::tables::load_tss;
     GDT.0.load();
     unsafe {

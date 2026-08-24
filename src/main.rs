@@ -7,7 +7,7 @@ extern crate alloc;
 mod vga_buffer;
 mod interrupts;
 mod gdt;
-mod memory;
+// mod memory; // legacy, not used in v0.4 (bootloader handles)
 mod scheduler;
 mod heap;
 mod pit;
@@ -18,18 +18,8 @@ mod chronos;
 mod wasm;
 mod ipc;
 mod synapse;
-// legacy cosmic modules
-mod nebula;
-mod quantum;
-mod gravity;
-mod hologram;
-mod neural;
-mod cosmic;
-mod dna;
-mod evolution;
-mod holomemory;
-mod consciousness;
-mod fractal;
+// legacy cosmic modules — kept as files for archaeology, not compiled in v0.4
+// mod nebula; mod quantum; mod gravity; mod hologram; mod neural; mod cosmic; mod dna; mod evolution; mod holomemory; mod consciousness; mod fractal;
 mod morphic;
 
 use core::panic::PanicInfo;
@@ -63,7 +53,8 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     println!("  CYBERDECK v0.4 — CHRONOS+NEXUS+ATLAS+SYNAPSE");
     println!("");
 
-    println!("[BOOT] mem regions: {}", boot_info.memory_map.len());
+    crate::println!("[BOOT] BootInfo @ {:p} (CHRONO-VECTIS TT)", boot_info as *const _);
+    // bootloader 0.9 BootInfo has no physical_memory_offset field — bump heap already set
     gdt::init_gdt();
     interrupts::init_idt();
     interrupts::init_pics();
@@ -74,9 +65,6 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     wasm::init_nexus();
     ipc::init_atlas();
 
-    if let Some(off)=boot_info.physical_memory_offset{
-        crate::println!("[HEAP] offset {:#x} bump active", off);
-    }
     vga_buffer::init_status_bar();
 
     println!("[SCHED] Spawning deck tasks...");

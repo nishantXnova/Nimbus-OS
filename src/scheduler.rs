@@ -1,4 +1,7 @@
-use core::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+extern crate alloc;
+use alloc::vec::Vec;
+use alloc::alloc::dealloc;
+use core::sync::atomic::{AtomicU64, Ordering};
 use spin::Mutex;
 use core::alloc::Layout;
 
@@ -61,7 +64,7 @@ impl Task {
 }
 
 pub struct Scheduler {
-    tasks: Mutex<Vec<Task>>,
+    pub tasks: Mutex<Vec<Task>>,
     current: Mutex<Option<TaskId>>,
     next_id: AtomicU64,
     ticks: AtomicU64,
@@ -147,7 +150,7 @@ impl Scheduler {
         let mut tasks = self.tasks.lock();
         if let Some(pos) = tasks.iter().position(|t| t.id == id) {
             let task = tasks.remove(pos);
-            unsafe { core::alloc::dealloc(task.stack, task.stack_layout); }
+            unsafe { dealloc(task.stack, task.stack_layout); }
             if *self.current.lock() == Some(id) { *self.current.lock() = None; }
             crate::println!("[SCHED] x Killed {}", id);
             return true;
