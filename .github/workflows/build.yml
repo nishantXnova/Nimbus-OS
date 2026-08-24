@@ -31,7 +31,7 @@ jobs:
         fi
 
     - name: Build kernel image (cloud only)
-      run: cargo bootimage
+      run: cargo -Z json-target-spec bootimage
 
     - name: Rename image to nimbus_os.bin (v86 expects this)
       run: |
