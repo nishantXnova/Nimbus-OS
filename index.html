@@ -3,37 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CHRONO-VECTIS — v0.4 CHRONOS+NEXUS+ATLAS+SYNAPSE</title>
+    <title>CHRONO-VECTIS — v0.4 TT-Cyberdeck</title>
     <style>
         :root { --bg:#0a0e14; --panel:#111827; --accent:#00ff9f; --accent2:#00d4ff; --text:#c9d1d9; --muted:#8b949e; }
         *{box-sizing:border-box}
-        body { background: radial-gradient(1200px 600px at 50% -10%, #0f1b2e 0%, var(--bg) 60%); color:var(--text); font-family: 'JetBrains Mono', 'Segoe UI', monospace; display:flex; flex-direction:column; align-items:center; min-height:100vh; margin:0; padding:18px; }
+        body { background: radial-gradient(1200px 600px at 50% -10%, #0f1b2e 0%, var(--bg) 60%); color:var(--text); font-family: 'JetBrains Mono', monospace; display:flex; flex-direction:column; align-items:center; min-height:100vh; margin:0; padding:18px; }
         header { display:flex; align-items:center; gap:18px; margin-bottom:12px; width:min(980px, 96vw); justify-content:space-between; }
         .brand { display:flex; align-items:center; gap:12px; }
         .brand img{height:42px; border-radius:8px; box-shadow:0 0 18px rgba(0,255,159,0.35)}
         .brand h1{margin:0; font-size:18px; letter-spacing:0.08em; color:var(--accent); text-shadow:0 0 10px rgba(0,255,159,0.4)}
         .brand p{margin:0; font-size:11px; color:var(--muted)}
         .badge{font-size:10px; border:1px solid #30363d; background:#0d1117; padding:6px 10px; border-radius:999px; color:var(--accent2)}
-        #screen_container { background:#000; padding:10px; border-radius:12px; box-shadow: 0 12px 40px rgba(0,0,0,0.6), 0 0 30px rgba(0,212,255,0.15); border:1px solid #1f2937; position:relative; overflow:hidden; }
-        #screen_container::before{content:""; position:absolute; inset:0; background: repeating-linear-gradient(0deg, rgba(0,255,159,0.03) 0 1px, transparent 1px 3px); pointer-events:none; }
-        canvas{ display:block; image-rendering: pixelated; }
+        #screen_container { background:#000; padding:0; border-radius:12px; box-shadow: 0 12px 40px rgba(0,0,0,0.6), 0 0 30px rgba(0,212,255,0.15); border:1px solid #1f2937; position:relative; overflow:hidden; width:640px; height:400px; display:flex; align-items:center; justify-content:center; }
+        #screen_container canvas{ display:block; image-rendering: pixelated; width:100%; height:100%; }
+        #screen_container::before{content:""; position:absolute; inset:0; background: repeating-linear-gradient(0deg, rgba(0,255,159,0.03) 0 1px, transparent 1px 3px); pointer-events:none; z-index:2; }
         .hud{display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; justify-content:center}
-        .hud kbd{background:#0d1117; border:1px solid #30363d; border-bottom-color:#21262d; padding:4px 8px; border-radius:6px; font-size:11px; color:var(--muted)}
+        .hud kbd{background:#0d1117; border:1px solid #30363d; padding:4px 8px; border-radius:6px; font-size:11px; color:var(--muted)}
         .hud kbd b{color:var(--accent)}
         .controls{margin-top:10px; display:flex; gap:8px}
-        button{background:#111827; border:1px solid #1f2937; color:var(--text); padding:8px 14px; border-radius:8px; cursor:pointer; font-weight:600; letter-spacing:0.04em}
+        button{background:#111827; border:1px solid #1f2937; color:var(--text); padding:8px 14px; border-radius:8px; cursor:pointer; font-weight:600}
         button.primary{background:linear-gradient(135deg, #00ff9f, #00d4ff); color:#001219; border-color:transparent}
         button:hover{filter:brightness(1.1)}
         #log_container{margin-top:12px; width:min(720px, 96vw); height:110px; background:#000; border:1px solid #1f2937; border-radius:8px; padding:10px; font-family: monospace; font-size:11px; color:#7ee787; overflow-y:auto; text-align:left}
         .status{margin-top:8px; font-size:12px; color:var(--muted)}
         .grid{width:min(980px,96vw); display:grid; grid-template-columns: 1fr auto; gap:12px; align-items:center}
         @media(max-width:700px){ .grid{grid-template-columns:1fr} header{flex-direction:column} }
+        .progress{position:absolute; bottom:0; left:0; height:3px; background:linear-gradient(90deg, var(--accent), var(--accent2)); width:0%; transition: width 0.2s; z-index:3;}
     </style>
 </head>
 <body>
     <header>
         <div class="brand">
-            <img src="logo.png" alt="Nimbus">
+            <img src="logo.png" alt="CHRONO-VECTIS">
             <div>
                 <h1>CHRONO-VECTIS <span style="font-weight:400; color:var(--muted)">v0.4</span></h1>
                 <p>CHRONOS • NEXUS WASM • ATLAS IPC • SYNAPSE Hot-Patch</p>
@@ -44,19 +45,20 @@
 
     <div class="grid">
         <div id="screen_container">
-            <canvas id="vga_canvas" width="640" height="400"></canvas>
+            <div id="vga" style="width:100%;height:100%;"></div>
+            <div class="progress" id="progress"></div>
         </div>
         <div style="background:var(--panel); border:1px solid #1f2937; border-radius:12px; padding:12px; min-width:220px">
             <div style="font-size:11px; letter-spacing:0.08em; color:var(--accent); margin-bottom:8px">CONTROLS</div>
             <div style="font-size:11px; line-height:1.7; color:var(--muted)">
-                <b style="color:var(--text)">TAB</b> cycle  <b style="color:var(--text)">1-8</b> jump<br>
+                <b style="color:var(--text)">TAB</b> cycle <b style="color:var(--text)">1-8</b> jump<br>
                 <b style="color:var(--text)">1</b>SH <b style="color:var(--text)">2</b>PS <b style="color:var(--text)">3</b>TM <b style="color:var(--text)">4</b>MM <b style="color:var(--text)">5</b>CH <b style="color:var(--text)">6</b>NX <b style="color:var(--text)">7</b>AT <b style="color:var(--text)">8</b>SY<br>
-                <b style="color:var(--text)">↑↓</b> select <b style="color:var(--text)">k</b> kill <b style="color:var(--text)">p</b> pri <b style="color:var(--text)">e</b> patch<br>
-                <b style="color:var(--text)">5</b> rewind <b style="color:var(--text)">6</b> wasm <b style="color:var(--text)">7</b> pipes <b style="color:var(--text)">8</b> hot
+                <b style="color:var(--text)">↑↓</b> select <b style="color:var(--text)">k</b> kill <b style="color:var(--text)">p</b> pri<br>
+                <b style="color:var(--text)">5</b> rewind <b style="color:var(--text)">6</b> wasm <b style="color:var(--text)">7</b> pipes
             </div>
             <div class="controls">
-                <button class="primary" onclick="window.location.reload()">RESET</button>
-                <button onclick="document.getElementById('vga_canvas').requestFullscreen()">FULLSCREEN</button>
+                <button class="primary" onclick="location.reload()">RESET</button>
+                <button onclick="document.getElementById('screen_container').requestFullscreen()">FULLSCREEN</button>
             </div>
         </div>
     </div>
@@ -66,11 +68,10 @@
         <kbd><b>nexus spawn fib.wasm</b> wasm</kbd>
         <kbd><b>atlas</b> pipes</kbd>
         <kbd><b>synapse 1 blink</b> hot-patch</kbd>
-        <kbd><b>kill/pri/spawn</b> proc</kbd>
     </div>
 
-    <div class="status" id="status_text">Initialising v86...</div>
-    <div id="log_container"><div>[System] Cyberdeck boot sequence...</div></div>
+    <div class="status" id="status_text">Loading v86 engine...</div>
+    <div id="log_container"><div>[System] CHRONO-VECTIS boot — fast load...</div></div>
 
     <script src="v86/v86_all.js"></script>
     <script>
@@ -80,36 +81,89 @@
             d.innerText="["+new Date().toLocaleTimeString()+"] "+msg;
             c.appendChild(d); c.scrollTop=c.scrollHeight;
         }
+        function setProgress(p){ document.getElementById("progress").style.width=p+"%"; }
+        function setStatus(s, color){
+            var el=document.getElementById("status_text");
+            el.innerText=s;
+            if(color) el.style.color=color;
+        }
+
         window.onload=function(){
-            var status=document.getElementById("status_text");
-            log("Loading v86 assets (local) ...");
+            log("Fetching v86.wasm + bios + nimbus_os.bin ...");
+            setProgress(10);
+            setStatus("Initialising v86 — fast boot...", "#00d4ff");
 
-            // Keyboard forwarding: v86 already captures, but we log hints
-            document.addEventListener('keydown', e=>{
-                if(['Tab','1','2','3','4','5','6','7','8'].includes(e.key)) log("Key: "+e.key+" -> Deck view v0.4");
-            });
+            // Modern V86 API (v86_all.js defines window.V86)
+            var V86Class = window.V86Starter || window.V86;
+            if(!V86Class){
+                log("ERROR: V86 not found in v86_all.js");
+                setStatus("ERROR: V86 missing", "#f85149");
+                return;
+            }
+            log("V86 class: "+ (window.V86Starter ? "V86Starter (legacy)" : "V86 (modern)"));
 
-            var emulator=new V86Starter({
-                wasm_path:"v86/v86.wasm",
-                memory_size:64*1024*1024,
-                vga_canvas:document.getElementById("vga_canvas"),
-                bios:{url:"v86/seabios.bin"},
-                vga_bios:{url:"v86/vgabios.bin"},
-                fda:{url:"nimbus_os.bin"},
-                autostart:true,
-            });
+            var screen = document.getElementById("vga");
+            // Ensure both APIs work: create canvas for legacy V86Starter, keep div for modern V86
+            var canvas = document.createElement("canvas");
+            canvas.style.width="100%"; canvas.style.height="100%"; canvas.width=640; canvas.height=400;
+            screen.appendChild(canvas);
+            var emulator;
+            try {
+                emulator = new V86Class({
+                    wasm_path: "v86/v86.wasm",
+                    memory_size: 32 * 1024 * 1024,
+                    vga_memory_size: 8 * 1024 * 1024,
+                    screen_container: screen,
+                    vga_canvas: canvas,
+                    bios: { url: "v86/seabios.bin" },
+                    vga_bios: { url: "v86/vgabios.bin" },
+                    hda: { url: "nimbus_os.bin" },
+                    fda: { url: "nimbus_os.bin" },
+                    autostart: true,
+                    disable_keyboard: false,
+                    disable_mouse: true,
+                    log_level: 0,
+                });
+            } catch(e){
+                log("V86 create failed: "+e);
+                setStatus("V86 create failed: "+e, "#f85149");
+                return;
+            }
+
+            setProgress(50);
+            log("V86 created, waiting for emulator-ready... Click canvas to focus keyboard (TAB/1-8).");
+
             emulator.add_listener("emulator-ready", function(){
-                status.innerText="System Ready. Cyberdeck online — use keyboard to control.";
-                status.style.color="#00ff9f";
-                log("Emulator ready. v0.4 @100Hz. 1-8/TAB views. 5=CHRONOS rewind 6=NEXUS 7=ATLAS 8=SYNAPSE. Click canvas to focus.");
+                setProgress(100);
+                setStatus("System Ready — CHRONO-VECTIS cyberdeck online — TAB/1-8 to switch", "#00ff9f");
+                log("Emulator ready. Boot @100Hz. Use TAB/1-8, ↑↓, k/p. Logs via serial if enabled.");
+                setTimeout(()=>{ setProgress(0); }, 800);
+                // Auto-focus for keyboard
+                screen.focus && screen.focus();
+                // also focus hack
+                document.getElementById("screen_container").focus();
             });
+
+            emulator.add_listener("download-progress", function(e){
+                if(e.file_name && e.total){
+                    var pct = Math.round(e.loaded/e.total*50)+50;
+                    setProgress(Math.min(pct, 95));
+                    // log only occasionally
+                }
+            });
+
             emulator.add_listener("download-error", function(e){
-                status.innerText="Error: Asset load failed — build nimbus_os.bin first (cargo bootimage)";
-                status.style.color="#f85149";
-                log("Download error. Run: cargo bootimage && python -m http.server 8000");
+                setStatus("Download error: "+e.file_name+" — check nimbus_os.bin exists", "#f85149");
+                log("Download error: "+JSON.stringify(e)+" — Run: cargo bootimage && cp bootimage-*.bin nimbus_os.bin");
+                setProgress(0);
             });
-            // Auto-focus canvas for keyboard
-            setTimeout(()=>document.getElementById("vga_canvas").focus(), 800);
+
+            // Keyboard hint
+            document.addEventListener('keydown', e=>{
+                if(['Tab','1','2','3','4','5','6','7','8'].includes(e.key)) log("Host key: "+e.key+" → deck view");
+            });
+
+            setStatus("Loading — if stuck, hard reload (Ctrl+Shift+R)", "#8b949e");
         };
     </script>
 </body>
