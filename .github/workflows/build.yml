@@ -1,43 +1,71 @@
-name: Build NimbusOS
+name: Build CHRONO-VECTIS
 
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
+
+# Cloud-only — nothing runs on your laptop. 100% GitHub Actions.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
-    - name: Install Rust
+    - name: Install Rust nightly
       uses: dtolnay/rust-toolchain@nightly
       with:
         components: rust-src, llvm-tools-preview
 
-    - name: Install bootimage
-      run: cargo install bootimage
+    - name: Install bootimage (cached)
+      run: |
+        if ! command -v cargo-bootimage >/dev/null 2>&1; then
+          cargo install bootimage --locked
+        fi
 
-    - name: Build Kernel image
+    - name: Build kernel image (cloud only)
       run: cargo bootimage
 
-    - name: Rename image
-      run: mv target/x86_64-nimbus_os/debug/bootimage-NimbusOS.bin nimbus_os.bin
+    - name: Rename image to nimbus_os.bin (v86 expects this)
+      run: |
+        ls -lh target/x86_64-nimbus_os/debug/bootimage-*.bin || true
+        # New crate name is chrono-vectis, old was NimbusOS — handle both
+        if [ -f target/x86_64-nimbus_os/debug/bootimage-chrono-vectis.bin ]; then
+          cp target/x86_64-nimbus_os/debug/bootimage-chrono-vectis.bin nimbus_os.bin
+        elif [ -f target/x86_64-nimbus_os/debug/bootimage-NimbusOS.bin ]; then
+          cp target/x86_64-nimbus_os/debug/bootimage-NimbusOS.bin nimbus_os.bin
+        else
+          echo "::error::bootimage not found"; exit 1
+        fi
+        ls -lh nimbus_os.bin
 
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v3
+    - name: Upload artifact (downloadable)
+      uses: actions/upload-artifact@v4
       with:
-        name: nimbus-os-binary
-        path: |
-          nimbus_os.bin
-          index.html
+        name: chrono-vectis-binary
+        path: nimbus_os.bin
+        if-no-files-found: error
 
-    - name: Deploy to GitHub Pages
-      if: github.ref == 'refs/heads/main'
-      uses: peaceiris/actions-gh-pages@v3
+    # Deploy to GitHub Pages — only on push to main, creates https://nishantXnova.github.io/Nimbus-OS/
+    - name: Setup Pages
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      uses: actions/configure-pages@v4
+
+    - name: Upload Pages artifact
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      uses: actions/upload-pages-artifact@v3
       with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./
-        publish_files: index.html,nimbus_os.bin,logo.png,v86/v86_all.js,v86/v86.wasm,v86/seabios.bin,v86/vgabios.bin
+        path: .
+        # Pages will serve index.html + nimbus_os.bin + v86/ + logo.png
+
+    - name: Deploy to Pages
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      id: deployment
+      uses: actions/deploy-pages@v4
