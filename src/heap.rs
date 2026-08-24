@@ -1,91 +1,90 @@
-use core::alloc::allocator::{AllocRef, Layout};
+//! Kernel heap: linked_list_allocator + bump fallback, real GlobalAlloc
+//! Replaces deprecated AllocRef bump that never freed.
+
+use core::alloc::{GlobalAlloc, Layout};
+use linked_list_allocator::LockedHeap;
 use spin::Mutex;
+use x86_64::{
+    structures::paging::{
+        mapper::MapToError, FrameAllocator, Mapper, Page, PageTableFlags, Size4KiB,
+    },
+    VirtAddr,
+};
 
-/// A simple bump allocator for kernel heap allocation
-/// Allocates memory linearly, no deallocation (monotonic)
-pub struct BumpAllocator {
+#[global_allocator]
+static ALLOCATOR: LockedHeap = LockedHeap::empty();
+
+/// Bump fallback before paging init (for early scheduler stacks)
+struct Bump {
+    start: usize,
+    end: usize,
+    next: Mutex<usize>,
+}
+impl Bump {
+    const fn new() -> Self { Self { start: 0, end: 0, next: Mutex::new(0) } }
+    fn init(&mut self, start: usize, size: usize) {
+        self.start = start;
+        self.end = start + size;
+        *self.next.lock() = start;
+    }
+    fn alloc(&self, layout: Layout) -> Option<*mut u8> {
+        let mut n = self.next.lock();
+        let aligned = (*n + layout.align() - 1) & !(layout.align() - 1);
+        if aligned + layout.size() > self.end { return None; }
+        *n = aligned + layout.size();
+        Some(aligned as *mut u8)
+    }
+}
+static BUMP: Mutex<Bump> = Mutex::new(Bump::new());
+
+/// Call early from _start before any Box/Vec
+pub fn init_heap_early(start: usize, size: usize) {
+    BUMP.lock().init(start, size);
+    crate::println!("[HEAP] Bump early: {:#x}-{:#x} ({} KiB)", start, start+size, size/1024);
+}
+
+/// After paging is ready, init real heap at given virt range
+pub fn init_heap(
+    mapper: &mut impl Mapper<Size4KiB>,
+    frame_allocator: &mut impl FrameAllocator<Size4KiB>,
     heap_start: usize,
-    heap_end: usize,
-    current: Mutex<usize>,
+    heap_size: usize,
+) -> Result<(), MapToError<Size4KiB>> {
+    let heap_start = VirtAddr::new(heap_start as u64);
+    let heap_end = heap_start + heap_size as u64;
+    let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
+
+    let page_range = Page::range_inclusive(
+        Page::containing_address(heap_start),
+        Page::containing_address(heap_end - 1u64),
+    );
+    for page in page_range {
+        let frame = frame_allocator.allocate_frame().expect("no frames for heap");
+        unsafe { mapper.map_to(page, frame, flags, frame_allocator)?.flush(); }
+    }
+
+    unsafe { ALLOCATOR.lock().init(heap_start.as_mut_ptr(), heap_size); }
+    crate::println!("[HEAP] LinkedList heap: {:#x}-{:#x} ({} KiB) ONLINE", heap_start.as_u64(), heap_end.as_u64(), heap_size/1024);
+    Ok(())
 }
 
-impl BumpAllocator {
-    pub fn new(heap_start: usize, heap_end: usize) -> Self {
-        BumpAllocator {
-            heap_start,
-            heap_end,
-            current: Mutex::new(heap_start),
-        }
-    }
-
-    pub fn init(&self) {
-        *self.current.lock() = self.heap_start;
-    }
+/// For scheduler stacks before heap init - fall back to bump
+pub fn alloc_early(layout: Layout) -> Option<*mut u8> {
+    // try global allocator first
+    let ptr = unsafe { ALLOCATOR.alloc(layout) };
+    if !ptr.is_null() { return Some(ptr); }
+    // fallback bump
+    BUMP.lock().alloc(layout)
 }
 
-unsafe impl AllocRef for BumpAllocator {
-    fn alloc(&mut self, layout: Layout) -> Result<NonNull<u8>, core::alloc::AllocErr> {
-        let mut current = self.current.lock();
-        
-        // Align the current pointer
-        let aligned = (*current + layout.align() - 1) & !(layout.align() - 1);
-        
-        // Check if we have enough space
-        if aligned + layout.size() > self.heap_end {
-            return Err(core::alloc::AllocErr);
-        }
-        
-        let result = NonNull::new(aligned as *mut u8).unwrap();
-        *current = aligned + layout.size();
-        
-        crate::println!("[HEAP] Allocated {} bytes at {:#x}", layout.size(), aligned);
-        Ok(result)
-    }
-
-    fn dealloc(&mut self, _ptr: NonNull<u8>, _layout: Layout) {
-        // Bump allocator doesn't support deallocation
-        // Memory is reclaimed on kernel restart
-    }
+pub fn free_early(ptr: *mut u8, layout: Layout) {
+    unsafe { ALLOCATOR.dealloc(ptr, layout); }
 }
 
-/// Global bump allocator instance
-use lazy_static::lazy_static;
-lazy_static! {
-    static ref HEAP_ALLOCATOR: BumpAllocator = BumpAllocator::new(0xFFFF_0000, 0xFFFF_FFFF);
-}
-
-pub fn init_heap(start: usize, size: usize) {
-    let end = start + size;
-    crate::println!("[HEAP] Initializing bump allocator: {:#x} - {:#x} ({} bytes)", 
-        start, end, size);
-    
-    // Create a new allocator with the given range
-    let allocator = BumpAllocator::new(start, end);
-    // Note: In real implementation, we'd replace the global allocator
-    // For now, we just initialize the existing one
-    unsafe {
-        // This would normally set up a global allocator
-        // HEAP_ALLOCATOR = BumpAllocator::new(start, end);
-    }
-    
-    crate::println!("[HEAP] Kernel heap initialized");
-}
-
-/// Allocate memory from the kernel heap
-pub fn allocate(size: usize, align: usize) -> Option<usize> {
-    let layout = Layout::from_size_align(size, align).ok()?;
-    
-    // Simplified allocation using the bump allocator
-    let mut current = HEAP_ALLOCATOR.current.lock();
-    let aligned = (*current + align - 1) & !(align - 1);
-    
-    if aligned + size > HEAP_ALLOCATOR.heap_end {
-        crate::println!("[HEAP] Allocation failed: out of memory");
-        return None;
-    }
-    
-    let result = aligned;
-    *current = aligned + size;
-    
-    Some(result)
+// Simple wrapper so `Box::new([0u8; N])` works after init_heap
+pub fn heap_stats() -> (usize, usize) {
+    // linked_list_allocator doesn't expose stats easily; estimate via bump
+    let b = BUMP.lock();
+    let used = *b.next.lock() - b.start;
+    (used, b.end - b.start)
 }

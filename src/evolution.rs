@@ -25,15 +25,15 @@ impl Gene {
     
     /// Mutate the gene
     pub fn mutate(&mut self) {
-        if ((core::time::SystemTime::now().duration_since(core::time::UNIX_EPOCH).unwrap().as_nanos() % 100) as f32 / 100.0) < self.mutation_rate {
-            let delta = ((core::time::SystemTime::now().duration_since(core::time::UNIX_EPOCH).unwrap().as_nanos() % 200) as f32 / 100.0) - 1.0;
+        if ((crate::scheduler::get_ticks() as u128 % 100) as f32 / 100.0) < self.mutation_rate {
+            let delta = ((crate::scheduler::get_ticks() as u128 % 200) as f32 / 100.0) - 1.0;
             self.value = (self.value + delta * 0.1).clamp(0.0, 1.0);
         }
     }
     
     /// Crossover with another gene
     pub fn crossover(&self, other: &Gene) -> Gene {
-        let value = if (core::time::SystemTime::now().duration_since(core::time::UNIX_EPOCH).unwrap().as_nanos() % 2) == 0 {
+        let value = if (crate::scheduler::get_ticks() as u128 % 2) == 0 {
             self.value
         } else {
             other.value
@@ -202,7 +202,7 @@ impl EvolutionEngine {
         
         // Update generation
         for process in processes.iter_mut() {
-            if (core::time::SystemTime::now().duration_since(core::time::UNIX_EPOCH).unwrap().as_nanos() % 3) == 0 {
+            if (crate::scheduler::get_ticks() as u128 % 3) == 0 {
                 process.generations += 1;
                 process.chromosome = process.evolve();
             }

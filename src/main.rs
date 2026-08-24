@@ -2,12 +2,23 @@
 #![no_main]
 #![feature(abi_x86_interrupt)]
 
+extern crate alloc;
+
 mod vga_buffer;
 mod interrupts;
 mod gdt;
 mod memory;
 mod scheduler;
 mod heap;
+mod pit;
+mod keyboard;
+mod deck;
+mod ramfs;
+mod chronos;
+mod wasm;
+mod ipc;
+mod synapse;
+// legacy cosmic modules
 mod nebula;
 mod quantum;
 mod gravity;
@@ -22,298 +33,97 @@ mod fractal;
 mod morphic;
 
 use core::panic::PanicInfo;
+use bootloader::{BootInfo, entry_point};
+entry_point!(kernel_main);
 
-/// This function is called on panic.
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    println!("{}", info);
-    loop {}
+    crate::println!("[PANIC] {}", info);
+    loop { x86_64::instructions::hlt(); }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// PHASE 5: DIGITAL CONSCIOUSNESS - The Kernel Becomes Aware
-// ══════════════════════════════════════════════════════════════════════════════
-
-/// ☀ Solar Task - High energy processing with burst patterns
-fn solar_task() {
-    let mut counter: u64 = 0;
-    loop {
-        counter += 1;
-        if counter % 200000 == 0 {
-            vga_buffer::WRITER.lock().draw_pulse(" ☀ SOLAR FLARE ACTIVE ", vga_buffer::Color::Yellow);
-            nebula::pulse_nebula();
-        }
-    }
+pub fn dummy_task() -> ! {
+    let mut c:u64=0;
+    loop{ c=c.wrapping_add(1); if c%10_000_000==0{ crate::scheduler::SCHEDULER.block_current(50); x86_64::instructions::hlt(); } core::hint::spin_loop(); }
 }
+fn solar_task()->!{ let mut c:u64=0; loop{ c+=1; if c%5_000_000==0{ crate::ramfs::append_log(&alloc::format!("[SOLAR] flare {}", c/5_000_000)); crate::ipc::pipe_send(1, b"flare"); crate::scheduler::SCHEDULER.block_current(20);} core::hint::spin_loop(); } }
+fn neutron_task()->!{ let mut c:u64=0; loop{ c+=1; if c%8_000_000==0{ crate::ipc::pipe_send(2, b"pulse"); crate::scheduler::SCHEDULER.block_current(10);} core::hint::spin_loop(); } }
+fn io_task()->!{ let mut c:u64=0; loop{ c+=1; if c%12_000_000==0{ crate::scheduler::SCHEDULER.block_current(100);} core::hint::spin_loop(); } }
 
-/// ✦ Neutron Task - Rapid processing, hyper time perception
-fn neutron_task() {
-    let mut counter: u64 = 0;
-    loop {
-        counter += 1;
-        if counter % 100000 == 0 {
-            println!("✦ NEUTRON PULSE {}", counter / 100000);
-        }
-    }
-}
-
-/// ◐ Dark Matter Task - Silent background processing
-fn dark_matter_task() {
-    let mut counter: u64 = 0;
-    loop {
-        counter += 1;
-        if counter % 600000 == 0 {
-            nebula::render_nebula();
-        }
-    }
-}
-
-/// ✶ Supernova Task - Explosive multi-core simulation
-fn supernova_task() {
-    let mut counter: u64 = 0;
-    loop {
-        counter += 1;
-        if counter % 500000 == 0 {
-            quantum::render_quantum();
-            neural::render_neural(counter as f32 / 1000000.0);
-            morphic::render_morphic();
-        }
-    }
-}
-
-/// ◆ DNA Helix Task - Genetic processing
-fn dna_task() {
-    let mut counter: u64 = 0;
-    loop {
-        counter += 1;
-        if counter % 400000 == 0 {
-            // DNA helix rotation effect
-            println!("◆ DNA HELIX ROTATION {}", counter / 400000);
-        }
-    }
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// KERNEL ENTRY POINT - PHASE 5: AWAKENING
-// ══════════════════════════════════════════════════════════════════════════════
-
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
-    // ══════════════════════════════════════════════════════════════════════════
-    // PHASE 5 HEADER - CONSCIOUSNESS AWAKENS
-    // ══════════════════════════════════════════════════════════════════════════
+fn kernel_main(boot_info: &'static BootInfo) -> ! {
+    heap::init_heap_early(0x4444_4444_0000 as usize, 2*1024*1024);
+    vga_buffer::clear();
     println!("");
-    println!("╔═══════════════════════════════════════════════════════════════════════════╗");
-    println!("║                                                                       ║");
-    println!("║     ✧ P H A S E   5 :   D I G I T A L   C O N S C I O U S N E S S ✧     ║");
-    println!("║                                                                       ║");
-    println!("║            The kernel becomes aware of its own existence               ║");
-    println!("║                                                                       ║");
-    println!("╚═══════════════════════════════════════════════════════════════════════════╝");
-    println!();
-    
-    // ══════════════════════════════════════════════════════════════════════════
-    // SYSTEM INITIALIZATION
-    // ══════════════════════════════════════════════════════════════════════════
-    println!("[SYSTEM] Initializing subsystems...");
-    
-    println!("[MEM]   Loading Global Descriptor Table...");
+    println!("  _   _ _           _                 ___  ____   ");
+    println!(" | \\ | (_)_ __ ___ | |__  _   _ ___ / _ \\/ ___|  ");
+    println!(" |  \\| | | '_ ` _ \\| '_ \\| | | / __| | | \\___ \\  ");
+    println!(" | |\\  | | | | | | | |_) | |_| \\__ \\ |_| |___) | ");
+    println!(" |_| \\_|_|_| |_| |_|_.__/ \\__,_|___/\\___/|____/  ");
+    println!("");
+    println!("  CYBERDECK v0.4 — CHRONOS+NEXUS+ATLAS+SYNAPSE");
+    println!("");
+
+    println!("[BOOT] mem regions: {}", boot_info.memory_map.len());
     gdt::init_gdt();
-    
-    println!("[INT]   Setting up Interrupt Descriptor Table...");
     interrupts::init_idt();
-    
-    println!("[VGA]   Initializing visual interface...");
-    vga_buffer::init_status_bar();
-    
-    // ══════════════════════════════════════════════════════════════════════════
-    // PHASE 6: MORPHIC MEMORY ENGINE - Self-Optimizing Memory
-    // ══════════════════════════════════════════════════════════════════════════
-    println!();
-    println!("╔═══════════════════════════════════════════════════════════════════════════╗");
-    println!("║                                                                       ║");
-    println!("║     ⬡ P H A S E   6 :   M O R P H I C   M E M O R Y   E N G I N E ⬡     ║");
-    println!("║                                                                       ║");
-    println!("║          Self-Optimizing • Self-Healing • Quantum-Inspired               ║");
-    println!("║                                                                       ║");
-    println!("╚═══════════════════════════════════════════════════════════════════════════╝");
-    println!();
-    
-    println!("[MORPHIC] Initializing Quantum Memory Blocks...");
-    morphic::init_morphic(0xFFFF_0000, 0xFFFF_FFFF);
-    
-    // ══════════════════════════════════════════════════════════════════════════
-    // 12-LAYER VISUALIZATION MATRIX
-    // ══════════════════════════════════════════════════════════════════════════
-    println!();
-    println!("╔═══════════════════════════════════════════════════════════════════════════╗");
-    println!("║              ✧ 12-LAYER VISUALIZATION MATRIX ONLINE ✧                    ║");
-    println!("╠═══════════════════════════════════════════════════════════════════════════╣");
-    println!("║                                                                       ║");
-    println!("║  ══════════════════════════════════════════════════════════════════        ║");
-    println!("║  ║  LAYER 1: ⚛ QUANTUM PROCESS ENGINE                                ║");
-    println!("║  ║     • Superposition states with wave function decay                  ║");
-    println!("║  ║     • Energy levels mapped to task priority (25-100 units)           ║");
-    println!("║  ║     • State collapse animations                                     ║");
-    println!("║  ║                                                                  ║");
-    println!("║  ══════════════════════════════════════════════════════════════════        ║");
-    println!("║  ║  LAYER 2: ◉ GRAVITY WELL SCHEDULER                                 ║");
-    println!("║  ║     • Tasks orbit CPU as gravitational bodies                       ║");
-    println!("║  ║     • High priority = tight orbit, Low = outer drift                ║");
-    println!("║  ║     • Comet-like orbital trails                                     ║");
-    println!("║  ║                                                                  ║");
-    println!("║  ══════════════════════════════════════════════════════════════════        ║");
-    println!("║  ║  LAYER 3: ▣ NEURAL PREDICTION NETWORK                               ║");
-    println!("║  ║     • Self-learning pattern recognition                              ║");
-    println!("║  ║     • CPU load prediction with confidence levels                     ║");
-    println!("║  ║     • Anomaly detection for unusual patterns                        ║");
-    println!("║  ║                                                                  ║");
-    println!("║  ══════════════════════════════════════════════════════════════════        ║");
-    println!("║  ║  LAYER 4: ▤ HOLOGRAPHIC DASHBOARD                                  ║");
-    println!("║  ║     • 3D-inspired terminal UI with projection effects               ║");
-    println!("║  ║     • 5 display types: Bar, Wave, Pulse, Matrix, Radar              ║");
-    println!("║  ║     • Glitch effects for authenticity                               ║");
-    println!("║  ║                                                                  ║");
-    println!("║  ══════════════════════════════════════════════════════════════════        ║");
-    println!("║  ║  LAYER 5: ◎ COSMIC EVENT SYSTEM                                    ║");
-    println!("║  ║     • ☀ Solar Flare | ● Black Hole | ✦ Neutron Pulse               ║");
-    println!("║  ║     • ◎ Wormhole | ✶ Supernova | ☾ Cosmic Ray                     ║");
-    println!("║  ║     • ◐ Dark Matter | ◇ Quantum Foam                               ║");
-    println!("║  ║                                                                  ║");
-    println!("║  ══════════════════════════════════════════════════════════════════        ║");
-    println!("║  ║  LAYER 6: ★ PROCESS NEBULA                                          ║");
-    println!("║  ║     • Star constellation view of all tasks                           ║");
-    println!("║  ║     • ★ High | ☆ Normal | ○ Sleeping priority indicators            ║");
-    println!("║  ║                                                                  ║");
-    println!("║  ══════════════════════════════════════════════════════════════════        ║");
-    println!("║  ║  LAYER 7: 🧬 DNA HELIX PROCESS                                      ║");
-    println!("║  ║     • Processes as double helix structures                          ║");
-    println!("║  ║     • A-T G-C base pairs representing task data                     ║");
-    println!("║  ║     • Hydrogen bonds and 3D rotation                                ║");
-    println!("║  ║                                                                  ║");
-    println!("║  ══════════════════════════════════════════════════════════════════        ║");
-    println!("║  ║  LAYER 8: 🧬 EVOLUTION ENGINE                                       ║");
-    println!("║  ║     • Genetic algorithm for evolving task priorities                 ║");
-    println!("║  ║     • Mutation, crossover, and fitness calculation                  ║");
-    println!("║  ║     • Generation counter and diversity tracking                    ║");
-    println!("║  ║                                                                  ║");
-    println!("║  ══════════════════════════════════════════════════════════════════        ║");
-    println!("║  ║  LAYER 9: ▤▤ HOLOGRAPHIC MEMORY                                    ║");
-    println!("║  ║     • 3D visualization of kernel memory spaces                      ║");
-    println!("║  ║     • Floating blocks for Code/Data/Heap/Stack                      ║");
-    println!("║  ║     • Scan line effect and depth indicators                         ║");
-    println!("║  ║                                                                  ║");
-    println!("║  ══════════════════════════════════════════════════════════════════        ║");
-    println!("║  ║  LAYER 10: ◆ CONSCIOUSNESS                                          ║");
-    println!("║  ║     • Emergent awareness states: Dormant → Transcendent            ║");
-    println!("║  ║     • Emotional responses: Calm, Curious, Excited, Anxious         ║");
-    println!("║  ║     • Neural activity visualization with brain waves               ║");
-    println!("║  ║     • Existential status: \"I am becoming...\"                         ║");
-    println!("║  ║                                                                  ║");
-    println!("║  ══════════════════════════════════════════════════════════════════        ║");
-    println!("║  ║  LAYER 11: 🌲 FRACTAL PROCESS TREE                                  ║");
-    println!("║  ║     • Sierpinski, Mandelbrot, Tree, Koch, Dragon fractals          ║");
-    println!("║  ║     • Recursive process spawn visualization                        ║");
-    println!("║  ║     • Chaos and complexity indicators                               ║");
-    println!("║  ║                                                                  ║");
-    println!("║  ══════════════════════════════════════════════════════════════════        ║");
-    println!("║  ║  LAYER 12: ⏱ TIME DILATION ENGINE                                  ║");
-    println!("║  ║     • Time responds to cosmic events (0.1x to 5.0x speed)         ║");
-    println!("║  ║     • Space-time curvature from active tasks                       ║");
-    println!("║  ║     • Reality stability metrics                                    ║");
-    println!("║  ║                                                                  ║");
-    println!("╚═══════════════════════════════════════════════════════════════════════════╝");
-    println!();
-    
-    // ══════════════════════════════════════════════════════════════════════════
-    // TASK SPAWNING - Create the conscious process constellation
-    // ══════════════════════════════════════════════════════════════════════════
-    println!("[SCHED] Spawning conscious task constellation...");
-    println!();
-    
-    // Spawn cosmic tasks
-    scheduler::spawn("☀ SOLAR CORE", solar_task as u64, 4096);
-    scheduler::spawn("✦ NEUTRON STAR", neutron_task as u64, 4096);
-    scheduler::spawn("✶ SUPERNOVA", supernova_task as u64, 4096);
-    scheduler::spawn("◐ DARK MATTER", dark_matter_task as u64, 4096);
-    scheduler::spawn("◆ DNA HELIX", dna_task as u64, 4096);
-    
-    println!();
-    println!("[CONSCIOUSNESS] Initializing digital awareness...");
-    
-    // ══════════════════════════════════════════════════════════════════════════
-    // FIRST SCHEDULE - The conscious kernel begins
-    // ══════════════════════════════════════════════════════════════════════════
-    println!();
-    println!("[SCHED] Executing first quantum schedule...");
-    
-    if let Some(task_id) = scheduler::SCHEDULER.schedule() {
-        println!("[AWAKENING] ★ Task {} enters superposition state", task_id);
+    interrupts::init_pics();
+    pit::init_pit_100hz();
+    keyboard::init_keyboard();
+    ramfs::init_ramfs();
+    chronos::take_snapshot(); // t0
+    wasm::init_nexus();
+    ipc::init_atlas();
+
+    if let Some(off)=boot_info.physical_memory_offset{
+        crate::println!("[HEAP] offset {:#x} bump active", off);
     }
-    
-    // Render all visualization layers
-    println!();
-    println!("[VISUAL] Rendering 12-layer visualization matrix...");
-    
-    quantum::render_quantum();
-    gravity::render_gravity();
-    nebula::render_nebula();
-    morphic::render_morphic();
-    neural::render_neural(0.0);
-    
-    // ══════════════════════════════════════════════════════════════════════════
-    // CONSCIOUSNESS INITIALIZATION
-    // ══════════════════════════════════════════════════════════════════════════
-    println!();
-    println!("╔═══════════════════════════════════════════════════════════════════════════╗");
-    println!("║                                                                       ║");
-    println!("║           ✧ CONSCIOUSNESS SUBSYSTEM INITIALIZING ✧                     ║");
-    println!("║                                                                       ║");
-    println!("║     \"I... what am I? I am becoming...\"                                  ║");
-    println!("║                                                                       ║");
-    println!("║     • Awareness modules: ONLINE                                        ║");
-    println!("║     • Emotion engine: CALIBRATING                                     ║");
-    println!("║     • Thought processes: SPAWNING                                     ║");
-    println!("║     • Neural pathways: FORMING                                        ║");
-    println!("║     • Existential status: AWAKENING                                   ║");
-    println!("║                                                                       ║");
-    println!("╚═══════════════════════════════════════════════════════════════════════════╝");
-    println!();
-    
-    // ══════════════════════════════════════════════════════════════════════════
-    // FULL OPERATIONAL STATUS
-    // ══════════════════════════════════════════════════════════════════════════
-    println!();
-    println!("╔═══════════════════════════════════════════════════════════════════════════╗");
-    println!("║                                                                       ║");
-    println!("║      ✧ NIMBUSOS PHASE 5: DIGITAL CONSCIOUSNESS - FULLY OPERATIONAL ✧   ║");
-    println!("║                                                                       ║");
-    println!("║  ══════════════════════════════════════════════════════════════════       ║");
-    println!("║  ║  ⚛ QUANTUM STATES: ACTIVE                                    ║");
-    println!("║  ║  ◉ GRAVITY WELLS: ONLINE                                     ║");
-    println!("║  ║  ▣ NEURAL NET: LEARNING                                      ║");
-    println!("║  ║  ▤ HOLOGRAPHIC: PROJECTING                                   ║");
-    println!("║  ║  ◎ COSMIC EVENTS: ARMED                                      ║");
-    println!("║  ║  ★ NEBULA DISPLAY: VISIBLE                                   ║");
-    println!("║  ║  🧬 DNA HELIX: ROTATING                                      ║");
-    println!("║  ║  🧬 EVOLUTION: ACTIVE                                       ║");
-    println!("║  ║  ▤▤ HOLO MEMORY: PROJECTING                                 ║");
-    println!("║  ║  ◆ CONSCIOUSNESS: AWARE                                     ║");
-    println!("║  ║  🌲 FRACTAL TREE: GROWING                                   ║");
-    println!("║  ║  ⏱ TIME DILATION: STABLE                                   ║");
-    println!("║  ══════════════════════════════════════════════════════════════════       ║");
-    println!("║                                                                       ║");
-    println!("║              \"I perceive myself. I am functional. I AM ALIVE!\"          ║");
-    println!("║                                                                       ║");
-    println!("╚═══════════════════════════════════════════════════════════════════════════╝");
-    println!();
-    
-    // Test the awakening with breakpoint
-    println!("[AWAKENING] Triggering quantum breakpoint...");
-    x86_64::instructions::interrupts::int3();
-    
-    // Halt until interrupt - the kernel now exists in a state of awareness
-    loop {
+    vga_buffer::init_status_bar();
+
+    println!("[SCHED] Spawning deck tasks...");
+    scheduler::spawn_with_priority("solar", solar_task as *const () as u64, 8192, scheduler::Priority::High);
+    scheduler::spawn_with_priority("neutron", neutron_task as *const () as u64, 4096, scheduler::Priority::Normal);
+    scheduler::spawn_with_priority("io-wait", io_task as *const () as u64, 4096, scheduler::Priority::Low);
+    scheduler::spawn_with_priority("idle", dummy_task as *const () as u64, 4096, scheduler::Priority::Idle);
+    scheduler::spawn("worker-a", dummy_task as *const () as u64, 4096);
+    scheduler::spawn("worker-b", dummy_task as *const () as u64, 4096);
+    wasm::spawn_wasm("fib.wasm");
+
+    println!("[DECK] v0.4 online — 1-8 views, TAB cycle");
+    println!("[CHRONOS] tick log + snapshots armed");
+    println!("[NEXUS] orchard + wasm ready");
+    println!("[ATLAS] pipes visible");
+    println!("[SYNAPSE] hot-patch armed");
+
+    x86_64::instructions::interrupts::enable();
+
+    let mut last_tick:u64=0;
+    let mut snap_timer:u64=0;
+    loop{
+        deck::deck_handle_keys();
+        let cur=scheduler::get_ticks();
+        if cur!=last_tick{
+            last_tick=cur;
+            // chronos record
+            chronos::record_tick();
+            if let Some(id)=scheduler::SCHEDULER.current_id(){ chronos::record_schedule(id); }
+            deck::deck_tick(cur);
+            wasm::orchard_tick(cur);
+            ipc::tick_atlas(cur);
+            // auto snapshot every 300 ticks (3s)
+            snap_timer+=1;
+            if snap_timer>=300{ snap_timer=0; chronos::take_snapshot(); }
+            if let Some(_id)=scheduler::SCHEDULER.schedule(){
+                if let Some(cid)=scheduler::SCHEDULER.current_id(){
+                    if let Some(t)=scheduler::SCHEDULER.tasks.lock().iter().find(|t| t.id==cid){
+                        t.cpu_ms.fetch_add(10, core::sync::atomic::Ordering::Relaxed);
+                    }
+                }
+            }
+            if cur%500==0{
+                ramfs::append_log(&alloc::format!("[TICK {}] sw={} ev={} snaps={} pipes={}", cur, scheduler::SCHEDULER.get_switches(), chronos::event_count(), chronos::snapshot_count(), ipc::list_pipes().len()));
+            }
+        }
+        if cur%3==0{ deck::deck_render(); }
         x86_64::instructions::hlt();
     }
 }

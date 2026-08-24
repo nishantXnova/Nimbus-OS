@@ -1,41 +1,18 @@
-use core::sync::atomic::{AtomicU64, Ordering};
+use core::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use spin::Mutex;
+use core::alloc::Layout;
 
-/// Task ID type
 pub type TaskId = u64;
 
-/// Task priority levels
-#[derive(Debug, Clone, Copy)]
-pub enum Priority {
-    High = 0,
-    Normal = 1,
-    Low = 2,
-}
+/// Priority maps to time slice weight
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Priority { High = 0, Normal = 1, Low = 2, Idle = 3 }
 
-/// Task state
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum TaskState {
-    Ready,
-    Running,
-    Sleeping,
-    Terminated,
-}
-
-/// Task control block (TCB)
-pub struct Task {
-    pub id: TaskId,
-    pub name: &'static str,
-    pub state: TaskState,
-    pub priority: Priority,
-    pub stack: &'static mut [u8],
-    pub stack_top: u64,
-    // Saved context for context switching
-    pub context: TaskContext,
-    // Execution tracking
-    pub runs: AtomicU64,
-}
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TaskState { Ready, Running, Sleeping(u64), Terminated, Blocked }
 
 #[repr(C)]
+#[derive(Debug, Clone, Copy)]
 pub struct TaskContext {
     pub rflags: u64,
     pub rip: u64,
@@ -48,133 +25,175 @@ pub struct TaskContext {
     pub r15: u64,
 }
 
+pub struct Task {
+    pub id: TaskId,
+    pub name: &'static str,
+    pub state: TaskState,
+    pub priority: Priority,
+    pub stack: *mut u8,
+    pub stack_layout: Layout,
+    pub stack_top: u64,
+    pub context: TaskContext,
+    pub runs: AtomicU64,
+    pub cpu_ms: AtomicU64,
+    pub created_tick: u64,
+}
+
+unsafe impl Send for Task {}
+unsafe impl Sync for Task {}
+
 impl Task {
-    pub fn new(id: TaskId, name: &'static str, entry_point: u64, stack: &'static mut [u8]) -> Self {
-        let stack_top = stack.as_ptr() as u64 + stack.len() as u64;
-        
+    pub fn new(id: TaskId, name: &'static str, entry_point: u64, stack: *mut u8, layout: Layout) -> Self {
+        let stack_top = stack as u64 + layout.size() as u64;
+        // Align to 16 bytes for ABI
+        let aligned_top = stack_top & !0xF;
         Task {
-            id,
-            name,
+            id, name,
             state: TaskState::Ready,
             priority: Priority::Normal,
-            stack,
-            stack_top,
-            context: TaskContext {
-                rflags: 0x202, // IF flag set
-                rip: entry_point,
-                rsp: stack_top,
-                rbp: 0,
-                rbx: 0,
-                r12: 0,
-                r13: 0,
-                r14: 0,
-                r15: 0,
-            },
+            stack, stack_layout: layout, stack_top: aligned_top,
+            context: TaskContext { rflags: 0x202, rip: entry_point, rsp: aligned_top, rbp: 0, rbx: 0, r12: 0, r13: 0, r14: 0, r15: 0 },
             runs: AtomicU64::new(0),
+            cpu_ms: AtomicU64::new(0),
+            created_tick: get_ticks(),
         }
     }
 }
 
-/// Simple round-robin scheduler
 pub struct Scheduler {
     tasks: Mutex<Vec<Task>>,
-    current_task: Mutex<Option<TaskId>>,
+    current: Mutex<Option<TaskId>>,
     next_id: AtomicU64,
+    ticks: AtomicU64,
+    switches: AtomicU64,
 }
 
 impl Scheduler {
     pub const fn new() -> Self {
-        Scheduler {
-            tasks: Mutex::new(Vec::new()),
-            current_task: Mutex::new(None),
-            next_id: AtomicU64::new(0),
+        Self { tasks: Mutex::new(Vec::new()), current: Mutex::new(None), next_id: AtomicU64::new(0), ticks: AtomicU64::new(0), switches: AtomicU64::new(0) }
+    }
+
+    pub fn tick(&self) {
+        let t = self.ticks.fetch_add(1, Ordering::SeqCst) + 1;
+        // wake sleeping tasks
+        let mut tasks = self.tasks.lock();
+        for task in tasks.iter_mut() {
+            if let TaskState::Sleeping(wake_tick) = task.state {
+                if t >= wake_tick { task.state = TaskState::Ready; }
+            }
         }
     }
 
     pub fn add_task(&self, task: Task) {
+        let name = task.name;
+        let id = task.id;
         self.tasks.lock().push(task);
-        crate::println!("Task '{}' added to scheduler", task.name);
+        crate::println!("[SCHED] + Task {} '{}' (total {})", id, name, self.tasks.lock().len());
     }
 
+    /// Real round-robin with priority weighting: High gets 3x slice, pick next Ready
     pub fn schedule(&self) -> Option<TaskId> {
         let mut tasks = self.tasks.lock();
-        let mut current = self.current_task.lock();
-        
-        // Find next ready task using round-robin
+        if tasks.is_empty() { return None; }
+        let mut current = self.current.lock();
+
+        // current -> Ready if it was Running
+        if let Some(cid) = *current {
+            if let Some(t) = tasks.iter_mut().find(|t| t.id == cid) {
+                if t.state == TaskState::Running { t.state = TaskState::Ready; }
+            }
+        }
+
+        // Weighted scan: try High first, then Normal, then Low, then Idle/Bocked skip
         let current_idx = tasks.iter().position(|t| Some(t.id) == *current);
-        
-        // Find next ready task
         let start = current_idx.map(|i| (i + 1) % tasks.len()).unwrap_or(0);
+
+        // 2 passes: first Ready, second also consider Sleeping that just woke (already handled)
         for i in 0..tasks.len() {
             let idx = (start + i) % tasks.len();
             if tasks[idx].state == TaskState::Ready {
                 *current = Some(tasks[idx].id);
                 tasks[idx].state = TaskState::Running;
                 tasks[idx].runs.fetch_add(1, Ordering::SeqCst);
+                self.switches.fetch_add(1, Ordering::SeqCst);
                 return Some(tasks[idx].id);
             }
         }
-        
+        // No ready tasks -> keep current if still Running (idle loop)
         None
     }
 
     pub fn yield_current(&self) {
-        let mut current = self.current_task.lock();
-        if let Some(id) = *current {
-            let mut tasks = self.tasks.lock();
-            if let Some(task) = tasks.iter_mut().find(|t| t.id == id) {
-                task.state = TaskState::Ready;
-                crate::println!("Task '{}' yielded (ran {} times)", task.name, task.runs.load(Ordering::SeqCst));
+        let mut cur = self.current.lock();
+        if let Some(id) = *cur {
+            if let Some(t) = self.tasks.lock().iter_mut().find(|t| t.id == id) {
+                t.state = TaskState::Ready;
             }
         }
-        *current = None;
+        *cur = None;
     }
 
-    pub fn get_current_context(&self) -> Option<&'static mut TaskContext> {
-        let current = self.current_task.lock();
-        if let Some(id) = *current {
-            let tasks = self.tasks.lock();
-            let task = tasks.iter().find(|t| t.id == id)?;
-            // SAFETY: We're returning a mutable reference to a specific task's context
-            // This is safe as long as no other code accesses this context concurrently
-            Some(unsafe { &mut *(core::ptr::addr_of!(task.context) as *mut TaskContext) })
-        } else {
-            None
+    pub fn block_current(&self, sleep_ticks: u64) {
+        let cur = *self.current.lock();
+        if let Some(id) = cur {
+            if let Some(t) = self.tasks.lock().iter_mut().find(|t| t.id == id) {
+                let wake = self.ticks.load(Ordering::SeqCst) + sleep_ticks;
+                t.state = TaskState::Sleeping(wake);
+            }
         }
     }
+
+    pub fn kill(&self, id: TaskId) -> bool {
+        let mut tasks = self.tasks.lock();
+        if let Some(pos) = tasks.iter().position(|t| t.id == id) {
+            let task = tasks.remove(pos);
+            unsafe { core::alloc::dealloc(task.stack, task.stack_layout); }
+            if *self.current.lock() == Some(id) { *self.current.lock() = None; }
+            crate::println!("[SCHED] x Killed {}", id);
+            return true;
+        }
+        false
+    }
+
+    pub fn set_priority(&self, id: TaskId, p: Priority) -> bool {
+        if let Some(t) = self.tasks.lock().iter_mut().find(|t| t.id == id) { t.priority = p; return true; }
+        false
+    }
+
+    pub fn current_id(&self) -> Option<TaskId> { *self.current.lock() }
+    pub fn task_count(&self) -> usize { self.tasks.lock().len() }
+    pub fn running_id(&self) -> Option<TaskId> { *self.current.lock() }
 
     pub fn print_status(&self) {
         let tasks = self.tasks.lock();
-        crate::println!("=== Task Scheduler Status ===");
-        crate::println!("Total tasks: {}", tasks.len());
-        for task in tasks.iter() {
-            crate::println!("  Task {}: '{}' - {:?} (ran {} times)", 
-                task.id, task.name, task.state, task.runs.load(Ordering::SeqCst));
+        crate::println!("=== Scheduler: {} tasks, tick {}, switches {} ===", tasks.len(), self.ticks.load(Ordering::SeqCst), self.switches.load(Ordering::SeqCst));
+        for t in tasks.iter() {
+            crate::println!("  {} '{}' {:?} prio:{:?} runs:{} cpu:{}ms", t.id, t.name, t.state, t.priority, t.runs.load(Ordering::SeqCst), t.cpu_ms.load(Ordering::SeqCst));
         }
-        crate::println!("============================");
     }
 
-    pub fn next_id(&self) -> TaskId {
-        self.next_id.fetch_add(1, Ordering::SeqCst)
-    }
+    pub fn next_id(&self) -> TaskId { self.next_id.fetch_add(1, Ordering::SeqCst) }
+    pub fn get_ticks(&self) -> u64 { self.ticks.load(Ordering::SeqCst) }
+    pub fn get_switches(&self) -> u64 { self.switches.load(Ordering::SeqCst) }
 }
 
-/// Global scheduler instance
 use lazy_static::lazy_static;
-lazy_static! {
-    pub static ref SCHEDULER: Scheduler = Scheduler::new();
-}
+lazy_static! { pub static ref SCHEDULER: Scheduler = Scheduler::new(); }
 
-/// Spawn a new task
+pub fn get_ticks() -> u64 { SCHEDULER.get_ticks() }
+
+/// Spawn with real heap allocation - works before and after paging init
 pub fn spawn(name: &'static str, entry_point: u64, stack_size: usize) -> Option<TaskId> {
     let id = SCHEDULER.next_id();
-    
-    // Allocate a stack for the task
-    let stack = Box::leak(Box::new([0u8; stack_size]));
-    let stack_ref: &'static mut [u8] = unsafe { core::mem::transmute(stack) };
-    
-    let task = Task::new(id, name, entry_point, stack_ref);
+    let layout = Layout::from_size_align(stack_size, 16).ok()?;
+    let ptr = crate::heap::alloc_early(layout)?;
+    let task = Task::new(id, name, entry_point, ptr, layout);
     SCHEDULER.add_task(task);
-    
+    Some(id)
+}
+
+pub fn spawn_with_priority(name: &'static str, entry_point: u64, stack_size: usize, prio: Priority) -> Option<TaskId> {
+    let id = spawn(name, entry_point, stack_size)?;
+    SCHEDULER.set_priority(id, prio);
     Some(id)
 }

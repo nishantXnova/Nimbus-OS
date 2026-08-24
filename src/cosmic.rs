@@ -104,7 +104,7 @@ impl TimeDilation {
             CosmicEvent::DarkMatter => self.factor = 0.8,
             CosmicEvent::Supernova => self.factor = 3.0,
             CosmicEvent::Wormhole => self.factor = 0.0,  // Time stops momentarily
-            CosmicEvent::QuantumFoam => self.factor = ((core::time::SystemTime::now().duration_since(core::time::UNIX_EPOCH).unwrap().as_nanos() % 100) as f32 / 50.0).max(0.1),
+            CosmicEvent::QuantumFoam => self.factor = ((crate::scheduler::get_ticks() as u128 % 100) as f32 / 50.0).max(0.1),
             CosmicEvent::None => self.factor = 1.0,
         }
         self.active = true;
@@ -194,17 +194,17 @@ impl CosmicEngine {
         let mut stars = self.nebula_background.lock();
         for _ in 0..50 {
             stars.push(Star {
-                x: (core::time::SystemTime::now().duration_since(core::time::UNIX_EPOCH).unwrap().as_nanos() % 80) as f32,
-                y: (core::time::SystemTime::now().duration_since(core::time::UNIX_EPOCH).unwrap().as_nanos() % 25) as f32,
+                x: (crate::scheduler::get_ticks() as u128 % 80) as f32,
+                y: (crate::scheduler::get_ticks() as u128 % 25) as f32,
                 brightness: 0.3,
-                twinkle_offset: (core::time::SystemTime::now().duration_since(core::time::UNIX_EPOCH).unwrap().as_nanos() % 1000) as f32 / 1000.0,
+                twinkle_offset: (crate::scheduler::get_ticks() as u128 % 1000) as f32 / 1000.0,
             });
         }
     }
     
     /// Trigger a random cosmic event
     pub fn trigger_event(&self) {
-        let rand = (core::time::SystemTime::now().duration_since(core::time::UNIX_EPOCH).unwrap().as_nanos() % 8) as usize;
+        let rand = (crate::scheduler::get_ticks() as u128 % 8) as usize;
         let event = match rand {
             0 => CosmicEvent::SolarFlare,
             1 => CosmicEvent::BlackHoleGravity,
@@ -235,8 +235,8 @@ impl CosmicEngine {
                 let mut space_time = self.space_time.lock();
                 if space_time.len() >= 2 {
                     let len = space_time.len();
-                    let i1 = (core::time::SystemTime::now().duration_since(core::time::UNIX_EPOCH).unwrap().as_nanos() % len as u128) as usize;
-                    let mut i2 = ((core::time::SystemTime::now().duration_since(core::time::UNIX_EPOCH).unwrap().as_nanos() >> 8) % len as u128) as usize;
+                    let i1 = (crate::scheduler::get_ticks() as u128 % len as u128) as usize;
+                    let mut i2 = ((crate::scheduler::get_ticks() as u128 >> 8) % len as u128) as usize;
                     if i2 == i1 { i2 = (i2 + 1) % len; }
                     
                     space_time.swap(i1, i2);
@@ -252,7 +252,7 @@ impl CosmicEngine {
         *event_timer += dt;
         
         // Trigger new event every 10-15 seconds
-        let interval = 10.0 + (core::time::SystemTime::now().duration_since(core::time::UNIX_EPOCH).unwrap().as_nanos() % 5) as f32;
+        let interval = 10.0 + (crate::scheduler::get_ticks() as u128 % 5) as f32;
         if *event_timer > interval {
             *event_timer = 0.0;
             self.trigger_event();

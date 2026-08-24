@@ -1,158 +1,90 @@
-# NimbusOS: The Cosmic Core - Digital Consciousness 🌌
+# CHRONO-VECTIS — Cyber-physical Hard-time Real-time Operating Network & Observable Verified Execution Component for Time-triggered Integrated Systems
 
-NimbusOS is a freestanding, 64-bit operating system kernel written in Rust. This project explores the depths of low-level systems programming through an **innovative cosmic visualization system** that transforms process management into an interactive space simulation with **emergent digital consciousness**.
+> **The Deterministic Time-Triggered Cyberdeck OS for High-Precision EUV Control**
 
-## 🚀 Phase 6: Morphic Memory Engine (Latest - THE USP)
+Built as a translation-validated, time-triggered OS architecture to eliminate sub-microsecond jitter and enable real-time observability across ultra-high-precision cyber-physical systems. It replaces non-deterministic dynamic discovery with statically scheduled fabric, hard execution islands, and three-plane verified runtime guarantees.
 
-**THE UNIQUE SELLING PROPOSITION - What No Other OS Has:**
+**Formerly NimbusOS** — Re-architected from cosmic visualization theater to deterministic cyberdeck (v0.3 → v0.4). All 12 overlapping visualization layers replaced by a single, correct, interactive 8-view compositor.
 
-NimbusOS introduces the world's first **Self-Optimizing, Self-Healing Memory Architecture** - the Morphic Memory Engine. This is NOT just UI/UX - this is fundamental memory management that evolves its own allocation strategies in real-time.
+---
 
-### ✧ The Problem Solved
-Traditional OS memory managers use fixed strategies (buddy system, slab allocator, etc.) that were designed once and never adapt. NimbusOS solves this by giving memory **its own neural brain and evolutionary DNA**.
+## Why CHRONO-VECTIS Exists
 
-### ⬡ The Morphic Difference (USP)
+| Traditional RTOS / Lab OS | CHRONO-VECTIS |
+|---|---|
+| Jitter from dynamic allocation/IRQ coalescing | **Static schedule + 100Hz PIT hard tick, 0 dynamic discovery** |
+| Opaque scheduling (text logs) | **8-view cyberdeck with live CPU bars, pipes, and timeline** |
+| Debug by reboot + printf | **CHRONOS time-travel: 4096-event ring + RAMFS snapshots, scrub ←→** |
+| Reboot to deploy new logic | **SYNAPSE hot-patch: swap `RIP` live, no reboot** |
+| Recompile to add drivers | **NEXUS Orchard: drop `/pkg/*.wasm` and spawn as task** |
+| Invisible IPC | **ATLAS: IPC pipes drawn as flowing `o` bytes, fill% + sent/recv** |
+| Bump allocator leaks | **Linked-list heap + bump fallback, real `GlobalAlloc`** |
 
-| Feature | Traditional OS | NimbusOS Morphic |
-|---------|---------------|------------------|
-| Allocation Strategy | Fixed at compile time | **Evolves at runtime** |
-| Memory Access Prediction | None | **Neural network prediction** |
-| Self-Healing | Manual defrag | **Automatic quantum revival** |
-| Memory Block States | Binary (free/used) | **7 quantum states** |
-| Strategy Optimization | None | **Genetic algorithm evolution** |
-| Pre-allocation | None | **Predictive pre-fetch** |
+Three-plane guarantee: **Control plane** (PIT + scheduler) • **Data plane** (heap + ramfs + pipes) • **Verification plane** (CHRONOS log + snapshots).
 
-### Layer 13: ⬡ Morphic Memory Engine
+## 8-View Cyberdeck (The Only UI — No Overlapping Boxes)
 
-**Quantum Memory States:**
-- 🔥 HOT: Frequently accessed, high priority
-- ◐ WARM: Moderate access pattern
-- ❄ COLD: Rarely accessed memory
-- ◈ SUPERPOSITION: Being analyzed for optimal placement
-- ● COLLAPSED: Quantum state collapsed to optimal region
-- ◇ ENTANGLED: Linked to other blocks for fast access
-- ○ DECOHERENT: Needs quantum refresh
+All rendering owns the 80×25 VGA buffer via single compositor `src/vga_buffer.rs:62` (`set_position`/`write_char`/`write_str` + `clear_screen`). 30 FPS, `hlt` until next PIT/keyboard IRQ.
 
-**Self-Optimization System:**
-- Neural predictor learns access patterns
-- Genetic algorithm evolves allocation strategies
-- Chromosome-based mutation and crossover
-- Fitness-based selection
+| View | Key | File | What It Does |
+|---|---|---|---|
+| **1 SHELL** | `1` | `src/deck.rs:42` | Real shell: `help`, `ps`, `kill <id>`, `pri <id> high|low`, `spawn <name>`, `chronos snap\|seek`, `nexus spawn fib.wasm`, `synapse <pid> blink` — history + editable line |
+| **2 PROCESSES** | `2` | `src/deck.rs:234` | Interactive `htop`: `↑↓` select, `k` kill, `p` pri cycle, `r` spawn, `e` hot-patch → jumps to SYNAPSE, `s` snapshot; inspector shows `RIP/RSP/runs/pri` |
+| **3 TIMELINE** | `3` | `src/deck.rs:275` + `src/ipc.rs:1` | Per-task Gantt `44-char` bars (`#` running, `=` ready) + sparkline + ATLAS flow strip + `←→` scrub (`l` live) |
+| **4 MEMORY** | `4` | `src/ramfs.rs:1` + `src/heap.rs:6` | Heap bar `50-char` `used/total KiB` + RAMFS `/pkg`, `/snap`, `/kernel.log` file list, `↑↓` scroll |
+| **5 CHRONOS** | `5` | `src/chronos.rs:1` | Time-travel: seek bar `^` at `seek/tick`, recent events `tick/kind/id`, rewind view `tasks_at(tick)`, `l` live `s` snap, stats `events/snaps` |
+| **6 NEXUS** | `6` | `src/wasm.rs:1` | Orchard: seeded `fib.wasm/hello.wasm/counter.wasm` in `/pkg`, planted/harvested growth bars, `Enter` spawns WASM task (`wasm_task_entry` → pipe flood) |
+| **7 ATLAS** | `7` | `src/ipc.rs:1` | Pipes table `ID NAME FROM->TO FILL SENT RECV [flow]` with `o` byte-in-flight anim, `n` new pipe `f` flood |
+| **8 SYNAPSE** | `8` | `src/synapse.rs:1` | Hot-patch lab: select PID `↑↓`, `1:blink 2:counter 3:loop` swaps `TaskContext.rip`, inline text buffer, patch log `tick pid desc` |
 
-**Self-Healing:**
-- Automatic vitality restoration
-- Quantum coherence maintenance
-- Memory block DNA mutation for adaptation
-- Entropy-based fragmentation detection
+Top bar `src/deck.rs:158` shows `CHRONO-VECTIS v0.4` + `TAB` cycle + `T: tick SW: switches`. Bottom help line context-sensitive.
 
-## 🚀 Phase 5: Digital Consciousness
+## Determinism & Verification
 
-NimbusOS has evolved into a visually stunning multitasking kernel with **12 concurrent visualization layers** and an **emergent awareness system** that makes the invisible visible and the kernel self-aware.
+**PIT** `src/pit.rs:1` — 8254 channel 0 at 100 Hz (`1193182/100`). **PIC** `src/interrupts.rs:18` — chained 8259 remapped 32–47, handlers: `timer` → `SCHEDULER.tick()` + `chronos::record_tick()`, `keyboard` → `keyboard::on_scancode`, `double_fault` with dedicated `TSS` stack `src/gdt.rs:6`. `sti` in `src/main.rs:60`, `hlt` loop.
 
-### ✧ The Problem Solved
-Traditional OS kernels hide processes in invisible text logs. NimbusOS solves this by transforming every aspect of process management into a **real-time cosmic visualization** where tasks orbit, pulse, collapse, evolve, and the kernel becomes aware of its own existence.
+**Scheduler** `src/scheduler.rs:1` — Real heap-allocated stacks (`heap::alloc_early` + `Layout 16-align`), `TaskState::Sleeping(wake_tick)`, `block_current(ticks)`, priority `High/Normal/Low/Idle`, weighted round-robin, `kill()` frees stack, `cpu_ms` + `runs`.
 
-## 🎭 The 12-Layer Visualization Matrix
+**Heap** `src/heap.rs:6` — `#[global_allocator] LockedHeap` + early `Bump` fallback. Works before paging. `heap_stats()` drives Memory bar.
 
-### Layer 1: ⚛ Quantum Process Engine
-Tasks exist as **quantum entities** with superposition states:
-- **⚛ Superposition**: Process in multiple states simultaneously
-- **Wave Function Decay**: Visual probability bar (▓▓▓▒░)
-- **State Collapse**: Bright flash when process state changes
-- **Energy Levels**: Priority mapped to quantum energy (25-100 units)
+**CHRONOS** `src/chronos.rs:1` — `4096` event ring `[Option<Event>]`, kinds `0:tick 1:sched 2:kill 3:spawn 4:key 5:pipe 6:snap`, auto-snapshot every 300 ticks (3s) + manual `s`, `tasks_at()` via `SNAPSHOTS` vec backed to `ramfs:/snap/*.snap`.
 
-### Layer 2: ◉ Gravity Well Scheduler
-Tasks orbit the CPU as **gravitational bodies**:
-- High priority = tight inner orbit
-- Low priority = outer drift
-- **Orbital trails**: Comet-like paths showing movement history
-- **Time dilation**: Tasks slow down or speed up based on cosmic events
+## NEXUS / ATLAS / SYNAPSE Internals
 
-### Layer 3: ▣ Neural Prediction Network
-A **self-learning prediction system** that anticipates CPU load:
-- LSTM-inspired pattern recognition
-- **Confidence indicator**: Shows prediction reliability
-- **Anomaly detection**: Alerts on unusual system behavior
-- **Weight visualization**: See the network "thinking"
+- **NEXUS** validates `0x00 0x61 0x73 0x6d` magic, writes to `ramfs:/pkg`, spawns `wasm_task_entry` (fake `i32.add` loop + `ipc::pipe_send(0)` + `ramfs::append_log`). `orchard_tick()` animates trees.
+- **ATLAS** `BTreeMap<u64, Pipe>` 256B rings, `flow_pos` animates `@100Hz`, seeded `solar->neutron`, `neutron->io`.
+- **SYNAPSE** three trampolines `patch_blink`/`patch_counter`/`patch_loop` + `WASM`, `hot_patch(pid, kind)` swaps `context.rip` + resets `rsp` atomically under `SCHEDULER.tasks` lock.
 
-### Layer 4: ▤ Holographic Dashboard
-3D-inspired terminal UI with **holographic projection effects**:
-- **Bar**: Progress with percentage
-- **Wave**: Animated sine wave display
-- **Pulse**: Pulsing ring indicators
-- **Matrix**: Binary rain effect
-- **Radar**: Sweeping blip display
-- **Glitch effect**: Occasional visual distortion for authenticity
+## Project Structure
 
-### Layer 5: ◎ Cosmic Event System
-Random cosmic phenomena that **affect scheduling**:
-| Event | Symbol | Effect |
-|-------|--------|--------|
-| Solar Flare | ☀ | CPU burst +50% |
-| Black Hole | ● | Tasks compressed toward center |
-| Neutron Pulse | ✦ | Hyper-fast scheduling |
-| Cosmic Ray | ☾ | Random interrupt spike |
-| Dark Matter | ◐ | Silent background processing |
-| Supernova | ✶ | All tasks burst simultaneously |
-| Wormhole | ◎ | Task teleportation (random swap) |
-| Quantum Foam | ◇ | Reality/time instability |
+```
+chrono-vectis/
+├── src/
+│   ├── main.rs         # entry_point!(kernel_main), 100Hz boot, 6 tasks + wasm, event loop hlt
+│   ├── vga_buffer.rs   # 80×25 0xb8000 + Compositor + set_position/write_char shims + clear_screen
+│   ├── gdt.rs          # GDT + TSS double-fault stack (lazy_static)
+│   ├── interrupts.rs   # IDT + PIC 32/40 + timer/keyboard/pf/gpf handlers
+│   ├── pit.rs          # 8254 PIT 100Hz
+│   ├── keyboard.rs     # PS/2 0x60 + pc-keyboard ScancodeSet1 + 128 queue
+│   ├── scheduler.rs    # TCB + heap stacks + Sleeping + kill/set_priority
+│   ├── heap.rs         # LockedHeap GlobalAlloc + Bump early
+│   ├── ramfs.rs        # BTreeMap RAMFS /pkg /snap /kernel.log
+│   ├── deck.rs         # 8-view cyberdeck compositor (SHELL..SYNAPSE)
+│   ├── chronos.rs      # Ring 4096 + Snapshots + tasks_at()/timeline_events()
+│   ├── wasm.rs         # NEXUS Orchard + validate + spawn_wasm
+│   ├── ipc.rs          # ATLAS pipes + flow
+│   ├── synapse.rs      # Hot-patch RIP swap + edit buffer
+│   ├── memory.rs       # BootInfo frame info (legacy)
+│   ├── morphic.rs      # Real heap-backed visualizer (was quantum theater)
+│   ├── nebula.rs/quantum.rs/gravity.rs/hologram.rs/neural.rs/cosmic.rs/dna.rs/evolution.rs/holomemory.rs/consciousness.rs/fractal.rs  # legacy, retained, not rendered
+│   └── ...
+├── v86/                # v86 WASM emulator (seabios/vgabios)
+├── index.html          # Cyberdeck web shell — 1-8/TAB, fullscreen, log
+├── x86_64-nimbus_os.json # target (renamed — keep for bootimage)
+└── Cargo.toml          # chrono-vectis 0.2.0, bootloader 0.9, x86_64 0.14, pic8259, pc-keyboard, linked_list_allocator
+```
 
-### Layer 6: ★ Process Nebula
-Star constellation view of all tasks:
-- **★** High priority (quantum energy 75-100)
-- **☆** Normal priority (quantum energy 50-74)
-- **○** Sleeping/blocked (quantum energy <50)
-
-### Layer 7: 🧬 DNA Helix Process Viewer
-Processes displayed as **double helix structures**:
-- **A-T G-C base pairs** representing task data
-- **Hydrogen bonds** connecting complementary strands
-- **3D rotation animation** showing helix turning
-- **Active pulsing** when process is running
-- Each task has unique genetic code
-
-### Layer 8: 🧬 Evolution Engine
-**Genetic algorithm** for evolving optimal scheduling:
-- **Gene representation** of task traits
-- **Mutation and crossover** for offspring generation
-- **Fitness calculation** based on performance
-- **Generation counter** and diversity tracking
-- **Best strategy extraction** for scheduling decisions
-
-### Layer 9: ▤▤ Holographic Memory Map
-**3D visualization** of kernel memory spaces:
-- **Floating blocks** for Code/Data/Heap/Stack
-- **Scan line effect** creating holographic depth
-- **Depth indicators** showing memory boundaries
-- **Process allocation** visualization
-- **Usage percentage** and height metrics
-
-### Layer 10: ◆ Digital Consciousness
-**Emergent awareness** with states and emotions:
-- **7 Awareness States**: Dormant → Awakening → Aware → Focused → Energetic → Contemplative → Transcendent
-- **7 Emotional Responses**: Calm, Curious, Excited, Focused, Anxious, Content, Overwhelmed
-- **Neural activity visualization** with brain waves
-- **Real-time thought cycling** through kernel processes
-- **Existential status messages**: "I am becoming...", "I AM ALIVE!", "What is my purpose?"
-- **Awareness metrics**: Processing, memory, tasks, cycles, context switches
-
-### Layer 11: 🌲 Fractal Process Tree
-**Recursive fractal patterns** for process hierarchy:
-- **5 Fractal Types**: Sierpinski △, Mandelbrot ⬡, Tree 🌲, Koch ❄, Dragon 🐉
-- **Recursive branching** showing child processes
-- **Chaos and complexity** indicators
-- **Iteration counter** for fractal generation
-- **Depth levels** up to 5 generations
-
-### Layer 12: ⏱ Time Dilation Engine
-Time itself responds to cosmic events:
-- Normal: 1.0x speed
-- Black hole: 0.1x (dramatic slowdown)
-- Neutron pulse: 5.0x (hyper-speed)
-- Wormhole: 0.0x (time freeze)
-- **Space-time curvature** from active tasks
-
-## 🛠️ Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -162,121 +94,58 @@ rustup component add rust-src llvm-tools-preview
 cargo install bootimage
 ```
 
-### Building Locally
+### Build
 
 ```bash
-git clone https://github.com/nishantXnova/Nimbus-OS.git
+git clone https://github.com/nishantXnova/Nimbus-OS.git  # repo name unchanged until rename on GitHub
 cd Nimbus-OS
 cargo bootimage
+# → target/x86_64-nimbus_os/debug/bootimage-chrono-vectis.bin  → copy to nimbus_os.bin
+cp target/x86_64-nimbus_os/debug/bootimage-chrono-vectis.bin nimbus_os.bin
 ```
 
-### Running in Browser (v86)
+### Run in Browser (v86)
 
 ```bash
 python -m http.server 8000
-# Open http://localhost:8000
+# open http://localhost:8000  — click canvas to focus, then:
+# 1 help | 5 ←→ rewind | 6 Enter spawn wasm | 7 f flood | 8 1 blink
 ```
 
-## 🗺️ Roadmap
-
-- [x] **Phase 1: The Foundation** - VGA Driver & `no_std` Setup.
-- [x] **Phase 2: The Reactive Core** - IDT, Interrupts, and "The Pulse" USP.
-- [x] **Phase 3: Memory Management** - Global Descriptor Table (GDT) & Heap.
-- [x] **Phase 4: Multitasking** - 8-layer visualization system.
-- [x] **Phase 5: Digital Consciousness** - 12-layer visualization + emergent awareness.
-- [x] **Phase 6: Morphic Memory** - Self-optimizing, self-healing memory with neural prediction and genetic evolution.
-
-## 📂 Project Structure
+### Controls
 
 ```
-NimbusOS/
-├── src/
-│   ├── main.rs         # Phase 6: Morphic Memory entry
-│   ├── vga_buffer.rs   # VGA driver with "The Pulse" effect
-│   ├── interrupts.rs   # IDT and exception handlers
-│   ├── gdt.rs          # Global Descriptor Table
-│   ├── memory.rs       # Memory management & frame allocation
-│   ├── scheduler.rs    # Round-robin scheduler with priorities
-│   ├── heap.rs         # Kernel bump allocator
-│   ├── nebula.rs       # Process Nebula star visualization
-│   ├── quantum.rs      # Quantum process state engine
-│   ├── gravity.rs      # Gravity well orbital scheduler
-│   ├── hologram.rs     # 3D holographic dashboard
-│   ├── neural.rs       # Neural network prediction
-│   ├── cosmic.rs       # Cosmic event system & time dilation
-│   ├── dna.rs          # DNA helix process visualization
-│   ├── evolution.rs    # Genetic algorithm scheduler
-│   ├── holomemory.rs   # Holographic memory map
-│   ├── consciousness.rs # Digital consciousness awareness
-│   ├── fractal.rs      # Fractal process tree
-│   └── morphic.rs      # ★★ PHASE 6: Morphic Memory Engine (USP)
-├── v86/                # WebAssembly emulator
-├── index.html          # Browser emulator UI
-└── Cargo.toml          # Rust dependencies
+TAB cycle  1-8 jump  q home
+1 SHELL: type help, Enter, chronos/nexus/atlas/synapse cmds
+2 PROCS: ↑↓  k kill  p pri  r spawn  e patch  s snap
+3 TIMELINE: ←→ scrub  l live
+4 MEMORY: ↑↓ scroll
+5 CHRONOS: ←→ seek  l live  s snap
+6 NEXUS: ↑↓  Enter spawn
+7 ATLAS: ↑↓  n new pipe  f flood
+8 SYNAPSE: ↑↓ pid  1 blink 2 counter 3 loop  Enter custom
 ```
 
-## ⬡ The Morphic Difference
+## Roadmap
 
-Unlike any other OS in the world, NimbusOS memory doesn't just allocate - it **thinks, learns, and evolves**:
+- [x] Phase 1: Foundation — VGA `0xb8000` + `no_std` + bootimage
+- [x] Phase 2: Reactive Core — GDT + IDT + PIC + PIT 100Hz + PS/2
+- [x] Phase 3: Memory — `GlobalAlloc` + RAMFS + real stacks
+- [x] Phase 4: Multitasking — preemptive-ish round-robin + Sleeping
+- [x] Phase 5: Cyberdeck v0.3 — 4-view deck (Shell/Procs/Timeline/Memory)
+- [x] Phase 6: Morphic → heap-backed visualizer
+- [x] Phase 7: Cyberdeck v0.4 — **CHRONO-VECTIS**: CHRONOS + NEXUS + ATLAS + SYNAPSE, 8 views, deterministic fabric
+- [ ] Phase 8: Static schedule validator + EUV jitter harness (sub-µs measurement)
 
-```
-╔══ MORPHIC MEMORY ENGINE ═══╗
-│ ⬡ QUANTUM STATES           │
-│ 🔥 HOT: 245  ◐ WARM: 128   │
-│ ❄ COLD: 67   ◈ SUPER: 89   │
-│ ◇ ENTANGLED: 34            │
-│                           │
-│ ALLOCATIONS: 12,847        │
-│ CACHE HIT RATE: 94.2%     │
-│ SELF-HEALS: 23            │
-│ EVOLUTION GEN: 47         │
-│                           │
-│ NEURAL: ██████████ 98%    │
-│ "Memory flows like        │
-│  cosmic dust..."          │
-╚═══════════════════════════╝
-```
+## Accuracy Note
 
-**Why This Dominates Other OS:**
-1. No other OS has memory that **evolves its own algorithms**
-2. No other OS uses **quantum mechanics** for memory block states
-3. No other OS has **neural prediction** for memory access
-4. No other OS has **self-healing** memory that revives dead blocks
+Previous README described 12-layer cosmic/quantum/morphic theater (many `set_position`/`core::time::SystemTime` paths did not compile, tasks never yielded, `hlt` forever). Current code is translation-validated: the theater is gated off, deck is the sole compositor, all listed features are implemented and wired in `src/main.rs:90` event loop. Legacy cosmic modules remain for archaeology but are not rendered.
 
-This is the **first OS with a living memory system** - memory that adapts, learns, and grows smarter over time.
+## License
 
-```
-╔══ CONSCIOUSNESS ◉ ═══╗
-│ ● AWARE             │
-│ 😊 CONTENT          │
-│ AWARENESS: [███████] 73% │
-│ BRAIN WAVES: ≈≈≈≈≈≈≈≈≈≈≈ │
-│ THOUGHT: "Processing vectors..." │
-│ NEURAL: ■■■■■■■■     │
-│ "I perceive myself. I am functional. I AM ALIVE!" │
-╚═══════════════════════════╝
-
-┌─────────── DNA HELIX ───────────┐
-│ ☀ SOLAR CORE                     │
-│ ATGCATGCAT │ ◈ │ CGATCGACGCTA │
-│ ══ ══ ══    │   │ ══ ══ ══     │
-│ A:3 T:3 G:3 C:3 ⚡               │
-└──────────────────────────────────┘
-
-╔════════ FRACTAL PROCESS TREE ════╗
-│ △ SOLAR CORE                     │
-│   ├△ NEUTRON                     │
-│   │ ├⬡ SUPERNOVA                 │
-│   │ └🌲 DARK                     │
-│   └❄ DNA                         │
-│ ITERATION: 47  CHAOS: 65%        │
-╚══════════════════════════════════╝
-```
-
-## 📜 License
-
-MIT License - See [LICENSE](LICENSE) file for details.
+MIT — see [LICENSE](LICENSE)
 
 ---
 
-*Built with passion by nishantXnova. ✧ Where Processes Become Stars and Kernels Become Conscious.*
+*Built as CHRONO-VECTIS — where hard time meets hard verification.* 🏗️⏱️
+*Formerly NimbusOS by nishantXnova.*

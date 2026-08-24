@@ -1,75 +1,43 @@
 use x86_64::structures::gdt::{GlobalDescriptorTable, Descriptor, SegmentSelector};
-use x86_64::instructions::segmentation::{CS, DS, SS};
-use x86_64::instructions::tables::load_gdt;
+use x86_64::structures::tss::TaskStateSegment;
+use x86_64::VirtAddr;
+use lazy_static::lazy_static;
 
-/// Custom struct for storing the GDT pointers needed for reload
-#[repr(C, packed)]
-struct GdtPointer {
-    limit: u16,
-    base: x86_64::PhysAddr,
-}
+const DOUBLE_FAULT_STACK_SIZE: usize = 4096 * 5;
 
-/// The GDT structure holding both the table and pointers
-struct GdtTables {
-    table: GlobalDescriptorTable,
-    pointer: GdtPointer,
-}
+static mut DOUBLE_FAULT_STACK: [u8; DOUBLE_FAULT_STACK_SIZE] = [0; DOUBLE_FAULT_STACK_SIZE];
 
-// We need to store the code and data segment selectors
-static mut GDT_TABLES: Option<GdtTables> = None;
-
-/// Initialize the Global Descriptor Table
-/// This sets up the segments for kernel and user mode
-pub fn init_gdt() {
-    let mut gdt = GlobalDescriptorTable::new();
-
-    // Kernel code segment - present, execution, ring 0, readable
-    let code_selector = gdt.add_entry(Descriptor::kernel_code_segment());
-    
-    // Kernel data segment - present, writable, ring 0
-    let data_selector = gdt.add_entry(Descriptor::kernel_data_segment());
-
-    // User code segment - present, execution, ring 3, readable
-    let user_code_selector = gdt.add_entry(Descriptor::user_code_segment());
-    
-    // User data segment - present, writable, ring 3
-    let user_data_selector = gdt.add_entry(Descriptor::user_data_segment());
-
-    // TSS segment (for future task switching)
-    // For now, we use a null TSS
-    let tss_selector = gdt.add_entry(Descriptor::tss_segment(x86_64::structures::tss::TaskStateSegment::new()));
-
-    // Create the pointer for loading
-    let pointer = GdtPointer {
-        limit: (core::mem::size_of::<GlobalDescriptorTable>() - 1) as u16,
-        base: x86_64::PhysAddr::new(core::ptr::addr_of!(gdt) as u64),
+lazy_static! {
+    static ref TSS: TaskStateSegment = {
+        let mut tss = TaskStateSegment::new();
+        tss.interrupt_stack_table[0] = {
+            let stack_start = VirtAddr::new(unsafe { &raw const DOUBLE_FAULT_STACK as u64 });
+            stack_start + DOUBLE_FAULT_STACK_SIZE as u64
+        };
+        tss
     };
+}
 
-    // Store the tables for later access
+lazy_static! {
+    static ref GDT: (GlobalDescriptorTable, SegmentSelector, SegmentSelector) = {
+        let mut gdt = GlobalDescriptorTable::new();
+        let code = gdt.add_entry(Descriptor::kernel_code_segment());
+        let data = gdt.add_entry(Descriptor::kernel_data_segment());
+        gdt.add_entry(Descriptor::tss_segment(&TSS));
+        (gdt, code, data)
+    };
+}
+
+pub fn init_gdt() {
+    use x86_64::instructions::segmentation::{CS, DS};
+    use x86_64::instructions::tables::load_tss;
+    GDT.0.load();
     unsafe {
-        GDT_TABLES = Some(GdtTables { table: gdt, pointer });
+        CS::set_reg(GDT.1);
+        DS::set_reg(GDT.2);
+        load_tss(GDT.1);
     }
-
-    // Load the GDT
-    load_gdt(&pointer);
-
-    // Update segment registers
-    unsafe {
-        CS::set_reg(code_selector);
-        DS::set_reg(data_selector);
-        SS::set_reg(data_selector);
-    }
-
-    crate::println!("GDT Loaded: CodeSel={:#x}, DataSel={:#x}", 
-        code_selector.0, data_selector.0);
+    crate::println!("[GDT] Loaded code={:#x} data={:#x}", GDT.1.0, GDT.2.0);
 }
-
-/// Get the code segment selector for user mode
-pub fn user_code_segment() -> SegmentSelector {
-    SegmentSelector(3) // Ring 3 code selector
-}
-
-/// Get the data segment selector for user mode
-pub fn user_data_segment() -> SegmentSelector {
-    SegmentSelector(4) // Ring 3 data selector
-}
+pub fn user_code_segment() -> SegmentSelector { SegmentSelector(3) }
+pub fn user_data_segment() -> SegmentSelector { SegmentSelector(4) }
